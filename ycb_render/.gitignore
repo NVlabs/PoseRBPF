@@ -1,0 +1,8 @@
+**.pyc
+.idea/*
+*.jpg
+*.png
+*.so
+*egg-info*
+build/
+dist/
