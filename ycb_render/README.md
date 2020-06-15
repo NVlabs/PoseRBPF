@@ -1,7 +1,8 @@
 # YCB Renderer
 
 This is an PyOpenGL version of YCB renderer, it has some key features to work 
-with deep learning frameworks. 
+with deep learning frameworks. This renderer is created by Fei Xia (feixia@stanford.edu) and modified by Yu Xiang 
+(yux@nvidia.com) and Xinke Deng (xdeng12@illinois.edu).
 - EGL headless rendering, so a running x server is not required
 - Rendering to multiple texture buffers, so it can render rgb, segmentation,
 point cloud in a single shader call
@@ -10,11 +11,6 @@ point cloud in a single shader call
 is easy to choose which GPU to use.
 - Minimalistic, it uses raw OpenGL, doesn't rely on third-party GL helper libraries other than 
 `assimp`. 
-
-## Installation 
-```bash
-git clone https://github.com/fxia22/ycb_render --recursive
-```
 
 Install dependencies:
 
