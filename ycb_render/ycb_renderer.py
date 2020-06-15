@@ -691,7 +691,6 @@ class YCBRenderer:
         return centers
 
 if __name__ == '__main__':
-    model_path = sys.argv[1]
     w = 640
     h = 480
 
@@ -701,8 +700,8 @@ if __name__ == '__main__':
         "002_master_chef_can",
         "011_banana",
     ]
-    obj_paths = ['{}/models/{}/textured_simple.obj'.format(model_path, item) for item in models]
-    texture_paths = ['{}/models/{}/texture_map.png'.format(model_path, item) for item in models]
+    obj_paths = ['./cad_models/ycb_models/{}/textured_simple.obj'.format(item) for item in models]
+    texture_paths = ['./cad_models/ycb_models/{}/texture_map.png'.format(item) for item in models]
     renderer.load_objects(obj_paths, texture_paths)
 
     # mat = pose2mat(pose)

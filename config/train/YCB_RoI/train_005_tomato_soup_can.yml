@@ -1,0 +1,46 @@
+EXP_DIR: ycb_dataset
+CODE_DIM: 128
+CAPACITY: 1
+GPU_ID: 0
+EXP_NAME: "fusion"
+TRAIN:
+  DEPTH_FUSION: True
+  RoI_ACC: True
+  TRAIN_TRANSNET: False
+  TRAIN_AAE: True
+  DEPTH_EMBEDDING: True
+  OBJECTS: !!python/tuple ['005_tomato_soup_can']
+  BOOTSTRAP_CONST: 2000
+  USE_TRIPLET_LOSS: False
+  WORKERS: 0
+  TRANS_SEP: False
+  DEEPER_TRANSNET: True
+  ONLINE_RENDERING: True
+  RENDER_DIST: !!python/tuple [1.1]
+  LIGHT_INT_MIN: 0.5
+  LIGHT_INT_MAX: 2.0
+  LIGHT_COLOR_VAR: 0.8
+  LIGHT_R_MAX: 0.75
+  LIGHT_R_MIN: 0.25
+#  TRANSNET_CAPACITY: !!python/tuple [20, 40, 64]
+  TRANSNET_CAPACITY: !!python/tuple [128, 256, 256]
+#  TRANSNET_CAPACITY: !!python/tuple [64, 128, 256, 128]
+  SHIFT_MIN: -5.0
+  SHIFT_MAX: 5.0
+  SCALE_MIN: 0.975
+  SCALE_MAX: 1.025
+  OC_PROB: 0.3
+  USE_OCCLUSION: True
+  N_OCCLUDERS: 3
+  TRUNC_PROB: 0.2
+  OC_XY_RANGE: !!python/tuple [-0.1, 0.1]
+  OC_Z_RANGE: !!python/tuple [0, 0.2]
+  TRUNC_X_MAX: 1.0
+  TRUNC_Y_MAX: 1.0
+  TRIPLET_LOSS_WT: 1.0
+  RENDER_SZ: 128
+  INPUT_IM_SIZE: [256, 256]
+#  FU: 500.0
+#  FV: 500.0
+#  U0: 64.0
+#  V0: 64.0
