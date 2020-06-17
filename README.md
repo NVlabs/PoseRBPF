@@ -30,3 +30,9 @@ conda activate pose_rbpf_env
 ```angular2html
 sh build.sh
 ```
+
+## Testing on YCB Video Dataset
+
+## Testing on TLess Dataset
+
+## Training
