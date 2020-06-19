@@ -23,7 +23,7 @@ PF:
   W: 640.0
   H: 480.0
   VISUALIZE: True
-  SAVE_DIR: './results/ycb_rgbd_test_100/037_scissors/'
+  SAVE_DIR: './results/ycb_test/037_scissors/'
   TRACK_OBJ: '037_scissors'
   N_E_ROT: 300
   WT_RESHAPE_VAR: 0.1

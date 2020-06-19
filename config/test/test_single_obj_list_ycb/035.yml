@@ -1,0 +1,4 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '035_power_drill',
+                           ]

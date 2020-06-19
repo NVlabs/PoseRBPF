@@ -1,0 +1,4 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '051_large_clamp',
+                           ]

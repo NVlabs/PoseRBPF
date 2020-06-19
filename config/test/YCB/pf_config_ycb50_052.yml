@@ -21,13 +21,10 @@ PF:
   W: 640.0
   H: 480.0
   VISUALIZE: True
-  SAVE_DIR: './results/ycb_rgbd_test_100/052_extra_large_clamp/'
+  SAVE_DIR: './results/ycb_test/052_extra_large_clamp/'
   TRACK_OBJ: '052_extra_large_clamp'
   N_E_ROT: 300
-#  DEPTH_DELTA: 0.025
-#  DEPTH_TAU: 0.025
   WT_RESHAPE_VAR: 0.05
-#  DEPTH_STD: 0.1
   MOTION_T_FACTOR: 0.0
   MOTION_R_FACTOR: 0.0
   ROT_RANGE: 0.5

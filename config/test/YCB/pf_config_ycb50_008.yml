@@ -21,7 +21,7 @@ PF:
   W: 640.0
   H: 480.0
   VISUALIZE: True
-  SAVE_DIR: './results/ycb_rgbd_test_100/008_pudding_box/'
+  SAVE_DIR: './results/ycb_test/008_pudding_box/'
   TRACK_OBJ: '008_pudding_box'
   N_E_ROT: 300
   WT_RESHAPE_VAR: 0.05

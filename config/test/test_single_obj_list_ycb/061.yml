@@ -1,0 +1,5 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '061_foam_brick'
+
+                           ]

@@ -1,0 +1,4 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '009_gelatin_box',
+                           ]

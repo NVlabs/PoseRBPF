@@ -1,0 +1,4 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '021_bleach_cleanser',
+                           ]

@@ -1,0 +1,4 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '036_wood_block'
+                           ]

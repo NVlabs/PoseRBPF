@@ -1,0 +1,4 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '019_pitcher_base',
+                           ]

@@ -18,7 +18,7 @@ PF:
   W: 720.0
   H: 540.0
   VISUALIZE: True
-  SAVE_DIR: './results/TLess_fast_prbpf_RGBD_embed_only/obj_15/'
+  SAVE_DIR: './results/TLESS_test/obj_15/'
   TRACK_OBJ: 'obj_15'
   N_E_ROT: 300
   WT_RESHAPE_VAR: 0.05

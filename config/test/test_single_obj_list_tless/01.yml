@@ -1,0 +1,4 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    'obj_01',
+                           ]

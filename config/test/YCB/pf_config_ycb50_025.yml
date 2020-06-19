@@ -21,7 +21,7 @@ PF:
   W: 640.0
   H: 480.0
   VISUALIZE: True
-  SAVE_DIR: './results/ycb_rgbd_test_100/025_mug/'
+  SAVE_DIR: './results/ycb_test/025_mug/'
   TRACK_OBJ: '025_mug'
   N_E_ROT: 300
   WT_RESHAPE_VAR: 0.1

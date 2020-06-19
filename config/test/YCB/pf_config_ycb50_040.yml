@@ -22,7 +22,7 @@ PF:
   W: 640.0
   H: 480.0
   VISUALIZE: True
-  SAVE_DIR: './results/ycb_rgbd_test_100/040_large_marker/'
+  SAVE_DIR: './results/ycb_test/040_large_marker/'
   TRACK_OBJ: '040_large_marker'
   N_E_ROT: 300
   WT_RESHAPE_VAR: 0.05
