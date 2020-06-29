@@ -270,7 +270,7 @@ class TLess_Multi_Render_Dataset(torch.utils.data.Dataset):
         return len(self.pose_list)
 
 # render on the fly
-class TLess_Codebook_Online_Generator(torch.utils.data.Dataset):
+class tless_codebook_online_generator(torch.utils.data.Dataset):
     def __init__(self, model_dir, model_names, render_dist, output_size=(128, 128), gpu_id=0,ts=15):
         self.renderer = TLessTensorRenderer(128, 128, gpu_id=gpu_id)
         self.h = 128
@@ -291,7 +291,7 @@ class TLess_Codebook_Online_Generator(torch.utils.data.Dataset):
 
         self.bbox_sz = 2 * cfg.TRAIN.U0 / cfg.TRAIN.FU * render_dist
 
-        _, self.pose_list = torch.load('./data_files/poses_codebook.pth')
+        self.pose_list = torch.load('./data_files/poses_codebook.pth')
 
         self.use_normalize_depth = cfg.TRAIN.NORMALIZE_DEPTH
 

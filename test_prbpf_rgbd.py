@@ -64,27 +64,45 @@ if __name__ == '__main__':
     print('Testing with objects: ')
     print(cfg.TEST.OBJECTS)
     obj_list = cfg.TEST.OBJECTS
-    with open('./datasets/ycb_video_classes.txt', 'r') as class_name_file:
-        obj_list_all = class_name_file.read().split('\n')
 
-    # # pf config files
-    # pf_config_files = sorted(glob.glob(args.pf_cfg_dir + '*yml'))
-    # cfg_list = []
-    # for obj in obj_list:
-    #     obj_idx = obj_list_all.index(obj)
-    #     train_config_file = args.train_cfg_dir + '{}.yml'.format(obj)
-    #     pf_config_file = pf_config_files[obj_idx]
-    #     cfg_from_file(train_config_file)
-    #     cfg_from_file(pf_config_file)
-    #     cfg_list.append(copy.deepcopy(cfg))
-    #
-    # pprint.pprint(cfg_list)
-    #
-    # # setup the poserbpf
-    # pose_rbpf = PoseRBPF(obj_list, cfg_list, args.ckpt_dir, args.codebook_dir)
+    if args.dataset_name == 'ycb_video':
+        print('Test on YCB Video Dataset ... ')
+        object_category = 'ycb'
+        with open('./datasets/ycb_video_classes.txt', 'r') as class_name_file:
+            obj_list_all = class_name_file.read().split('\n')
+    elif args.dataset_name == 'tless':
+        print('Test on TLESS Dataset ... ')
+        object_category = 'tless'
+        with open('./datasets/tless_classes.txt', 'r') as class_name_file:
+            obj_list_all = class_name_file.read().split('\n')
+
+    # pf config files
+    pf_config_files = sorted(glob.glob(args.pf_cfg_dir + '*yml'))
+    cfg_list = []
+    for obj in obj_list:
+        obj_idx = obj_list_all.index(obj)
+        train_config_file = args.train_cfg_dir + '{}.yml'.format(obj)
+        pf_config_file = pf_config_files[obj_idx]
+        cfg_from_file(train_config_file)
+        cfg_from_file(pf_config_file)
+        cfg_list.append(copy.deepcopy(cfg))
+    pprint.pprint(cfg_list)
+
+    # checkpoints and codebooks
+    checkpoint_list = []
+    codebook_list = []
+    for obj in obj_list:
+        checkpoint_list.append(args.ckpt_dir+'{}_py3.pth'.format(obj))
+        if not os.path.exists(args.codebook_dir):
+            os.makedirs(args.codebook_dir)
+        codebook_list.append(args.codebook_dir+'{}.pth'.format(obj))
+
+    # setup the poserbpf
+    pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, object_category, modality='rgbd', cad_model_dir=args.cad_dir)
+
     # target_obj = cfg.TEST.OBJECTS[0]
     # target_cfg = pose_rbpf.set_target_obj(target_obj)
-
+    #
     # # evaluate the system
     # if args.dataset_name == 'ycb_video':
     #     test_list_file = './datasets/YCB_Video_Dataset_Eval/Full_Exp/{}/seq{}.txt'.format(target_obj, args.n_seq)

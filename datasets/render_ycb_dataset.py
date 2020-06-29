@@ -568,7 +568,7 @@ class ycb_codebook_online_generator(torch.utils.data.Dataset):
         self.output_size = output_size
         self.ts = ts
         self.bbox_sz = 2 * cfg.TRAIN.U0 / cfg.TRAIN.FU * render_dist
-        _, self.pose_list = torch.load('./data_files/poses_codebook.pth')
+        self.pose_list = torch.load('./data_files/poses_codebook.pth')
 
     def __getitem__(self, image_index):
 

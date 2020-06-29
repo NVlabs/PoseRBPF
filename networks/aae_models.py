@@ -112,7 +112,7 @@ class encoder_rgbd(nn.Module):
 
         return output
 
-    def forward_with_rgbd(self, x, roi, z, box_size):
+    def forward(self, x, roi, z, box_size):
         # note here roi is represented in 256x256 image [upper_left_u, upper_left_v, lower_right_u, lower_right_v]
         out = self.layer1(x[:, :3])
         out = self.layer2(out)
@@ -137,6 +137,29 @@ class encoder_rgbd(nn.Module):
         output = (code_rgb, code_d)
 
         return output
+
+    def forward_codebook(self, x, roi):
+        out = self.layer1(x[:, :3])
+        out = self.layer2(out)
+        out = self.layer3(out)
+        roi_rgb = roi.clone()
+        roi_rgb[:, 1:] /= 8.0
+        out = self.roi_layer(out, roi_rgb)
+        out = self.layer4(out)
+        out = out.view(-1, 512 * 8 * 8 * self.capacity)
+        code_rgb = self.fc_rgb(out)
+
+        out_d = self.roi_layer_d(x[:, [3]], roi)
+        out_d = self.layer1_d(out_d)
+        out_d = self.layer2_d(out_d)
+        out_d = self.layer3_d(out_d)
+        out_d = self.layer4_d(out_d)
+        out_d = out_d.view(-1, 256 * 8 * 8 * self.capacity)
+        out = out_d
+        code_d = self.fc_depth(out)
+        output = (code_rgb, code_d)
+        return output
+
 
 class encoder_rgb(nn.Module):
     def __init__(self, object_total_n, capacity=1, code_dim=128):
@@ -297,13 +320,13 @@ class AAE(nn.Module):
         if self.modality == 'rgbd':
             self.encoder = encoder_rgbd(capacity=capacity, code_dim=code_dim)
             self.decoder = decoder_rgb(capacity=capacity, code_dim=code_dim)
-            self.decoder_depth = decoder_depth(capacity=capacity, code_dim=code_dim)
+            self.depth_decoder = decoder_depth(capacity=capacity, code_dim=code_dim)
             self.encoder.apply(weights_init)
             self.decoder.apply(weights_init)
-            self.decoder_depth.apply(weights_init)
+            self.depth_decoder.apply(weights_init)
             self.optimizer = optim.Adam(list(self.encoder.parameters()) + \
                                         list(self.decoder.parameters()) + \
-                                        list(self.decoder_depth.parameters()),
+                                        list(self.depth_decoder.parameters()),
                                         lr=0.0002)
         else:
             self.encoder = encoder_rgb(capacity=capacity, code_dim=code_dim)
@@ -332,7 +355,6 @@ class AAE(nn.Module):
 
     def load_ckpt_weights(self, state_dict):
         print('Start assigning weights to AAE ...')
-
         new_state_dict = OrderedDict()
         for k, v in state_dict.items():
             m_idx = isSubstring('module', str(k))
@@ -405,7 +427,7 @@ class AAE(nn.Module):
             roi_info[:, 3] = 128.0 + 128.0 / 2
             roi_info[:, 4] = 128.0 + 128.0 / 2
 
-            code, code_depth = self.encoder.forward(torch.cat((images.detach(), depths.detach()), dim=1),
+            code, code_depth = self.encoder.forward_codebook(torch.cat((images.detach(), depths.detach()), dim=1),
                                                     roi_info.clone().detach())
             code = code.detach().view(images.size(0), -1)
             code_depth = code_depth.detach().view(images.size(0), -1)
