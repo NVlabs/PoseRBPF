@@ -100,18 +100,20 @@ if __name__ == '__main__':
     # setup the poserbpf
     pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, object_category, modality='rgbd', cad_model_dir=args.cad_dir)
 
-    # target_obj = cfg.TEST.OBJECTS[0]
-    # target_cfg = pose_rbpf.set_target_obj(target_obj)
-    #
-    # # evaluate the system
-    # if args.dataset_name == 'ycb_video':
-    #     test_list_file = './datasets/YCB_Video_Dataset_Eval/Full_Exp/{}/seq{}.txt'.format(target_obj, args.n_seq)
-    #     dataset_test = YcbVideoSeqDataset(class_ids=[0],
-    #                                       object_names=[target_obj],
-    #                                       class_model_num=1,
-    #                                       path=args.dataset_dir,
-    #                                       list_file=test_list_file)
-    #     pose_rbpf.Run_Dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1)
+    target_obj = cfg.TEST.OBJECTS[0]
+    target_cfg = pose_rbpf.set_target_obj(target_obj)
+
+    # evaluate the system
+    if args.dataset_name == 'ycb_video':
+        test_list_file = './datasets/YCB/{}/seq{}.txt'.format(target_obj, args.n_seq)
+        dataset_test = ycb_video_dataset(class_ids=[0],
+                                         object_names=[target_obj],
+                                         class_model_num=1,
+                                         path=args.dataset_dir,
+                                         list_file=test_list_file)
+
+        pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1)
+
     # elif args.dataset_name == 'srl_video':
     #     test_list_file = './datasets/SRL_Robot_Sequences/{}/seq{}.txt'.format(target_obj, args.n_seq)
     #     dataset_test = SRLSeqDataset(class_ids=[0],

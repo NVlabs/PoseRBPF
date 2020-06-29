@@ -85,121 +85,121 @@ class PoseRBPF:
             self.rbpf_list.append(particle_filter(self.cfg_list[idx_obj].PF, n_particles=self.cfg_list[idx_obj].PF.N_PROCESS))
             self.rbpf_ok_list.append(False)
 
-        # # renderer
-        # self.intrinsics = np.array([[self.cfg_list[0].PF.FU, 0, self.cfg_list[0].PF.U0],
-        #                        [0, self.cfg_list[0].PF.FV, self.cfg_list[0].PF.V0],
-        #                        [0, 0, 1.]], dtype=np.float32)
-        #
-        # self.renderer = render_wrapper(self.obj_list, self.intrinsics, gpu_id=self.cfg_list[0].GPU_ID,
-        #                                model_dir=model_dir,
-        #                                model_ctg=self.model_ctg,
-        #                                im_w=int(self.cfg_list[0].PF.W),
-        #                                im_h=int(self.cfg_list[0].PF.H),
-        #                                initialize_render=True)
-        #
-        # # target object property
-        # self.target_obj = None
-        # self.target_obj_idx = None
-        # self.target_obj_encoder = None
-        # self.target_obj_codebook = None
-        # self.target_obj_cfg = None
-        # self.target_box_sz = None
-        #
-        # self.max_sim_rgb = 0
-        # self.max_sim_depth = 0
-        # self.max_vis_ratio = 0
-        #
-        # # initialize the particle filters
-        # self.rbpf = particle_filter(self.cfg_list[0].PF, n_particles=self.cfg_list[0].PF.N_PROCESS)
-        # self.rbpf_ok = False
-        #
-        # # pose rbpf for initialization
-        # self.rbpf_init_max_sim = 0
-        #
-        # # data properties
-        # self.data_with_gt = False
-        # self.data_with_est_bbox = False
-        # self.data_with_est_center = False
-        # self.data_intrinsics = np.ones((3, 3), dtype=np.float32)
-        #
-        # # initialize the PoseRBPF variables
-        # # ground truth information
-        # self.gt_available = False
-        # self.gt_t = [0, 0, 0]
-        # self.gt_rotm = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
-        # self.gt_bbox_center = np.zeros((3,))
-        # self.gt_bbox_size = 0
-        # self.gt_uv = np.array([0, 0, 1], dtype=np.float32)
-        # self.gt_z = 0
-        #
-        # # estimated states
-        # self.est_bbox_center = np.zeros((2, self.cfg_list[0].PF.N_PROCESS))
-        # self.est_bbox_size = np.zeros((self.cfg_list[0].PF.N_PROCESS,))
-        # self.est_bbox_weights = np.zeros((self.cfg_list[0].PF.N_PROCESS,))
-        #
-        # # for logging
-        # self.log_err_t = []
-        # self.log_err_tx = []
-        # self.log_err_ty = []
-        # self.log_err_tz = []
-        # self.log_err_rx = []
-        # self.log_err_ry = []
-        # self.log_err_rz = []
-        # self.log_err_r = []
-        # self.log_err_t_star = []
-        # self.log_err_r_star = []
-        # self.log_max_sim = []
-        # self.log_dir = './'
-        # self.log_created = False
-        # self.log_pose = None
-        # self.log_error = None
-        #
-        # # posecnn prior
-        # self.prior_uv = [0, 0, 1]
-        # self.prior_z = 0
-        # self.prior_t = np.array([0, 0, 0], dtype=np.float32)
-        # self.prior_R = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
-        #
-        # # flags for experiments
-        # self.exp_with_mask = True
-        # self.step = 0
-        # self.iskf = False
-        # self.init_step = False
-        # self.save_uncertainty = False
-        # self.show_prior = False
-        #
-        # # motion model
-        # self.T_c1c0 = np.eye(4, dtype=np.float32)
-        # self.T_o0o1 = np.eye(4, dtype=np.float32)
-        # self.T_c0o = np.eye(4, dtype=np.float32)
-        # self.T_c1o = np.eye(4, dtype=np.float32)
-        # self.Tbr1 = np.eye(4, dtype=np.float32)
-        # self.Tbr0 = np.eye(4, dtype=np.float32)
-        # self.Trc = np.eye(4, dtype=np.float32)
-        #
-        # # multiple object pose estimation (mope)
-        # self.mope_Tbo_list = []
-        # self.mope_pc_b_list = []
-        # for i in range(len(self.rbpf_list)):
-        #     self.mope_Tbo_list.append(np.eye(4, dtype=np.float32))
-        #     self.mope_pc_b_list.append(None)
-        #
-        # # evaluation module
-        # self.cos_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
-        #
-        # # relative poses
-        # self.T_ob_o = []
-        # self.rel_pose_flag = []
-        # for i in range(len(self.obj_list)):
-        #     self.T_ob_o.append(np.eye(4, dtype=np.float32))
-        #     self.rel_pose_flag.append(False)
-        #
-        # # for visualization
-        # self.uv_init = None
-        # self.z_init = None
-        #
-        # self.image_recon = None
-        # self.skip = False
+        # renderer
+        self.intrinsics = np.array([[self.cfg_list[0].PF.FU, 0, self.cfg_list[0].PF.U0],
+                               [0, self.cfg_list[0].PF.FV, self.cfg_list[0].PF.V0],
+                               [0, 0, 1.]], dtype=np.float32)
+
+        self.renderer = render_wrapper(self.obj_list, self.intrinsics, gpu_id=self.cfg_list[0].GPU_ID,
+                                       model_dir=cad_model_dir,
+                                       model_ctg=self.obj_ctg,
+                                       im_w=int(self.cfg_list[0].PF.W),
+                                       im_h=int(self.cfg_list[0].PF.H),
+                                       initialize_render=True)
+
+        # target object property
+        self.target_obj = None
+        self.target_obj_idx = None
+        self.target_obj_encoder = None
+        self.target_obj_codebook = None
+        self.target_obj_cfg = None
+        self.target_box_sz = None
+
+        self.max_sim_rgb = 0
+        self.max_sim_depth = 0
+        self.max_vis_ratio = 0
+
+        # initialize the particle filters
+        self.rbpf = particle_filter(self.cfg_list[0].PF, n_particles=self.cfg_list[0].PF.N_PROCESS)
+        self.rbpf_ok = False
+
+        # pose rbpf for initialization
+        self.rbpf_init_max_sim = 0
+
+        # data properties
+        self.data_with_gt = False
+        self.data_with_est_bbox = False
+        self.data_with_est_center = False
+        self.data_intrinsics = np.ones((3, 3), dtype=np.float32)
+
+        # initialize the PoseRBPF variables
+        # ground truth information
+        self.gt_available = False
+        self.gt_t = [0, 0, 0]
+        self.gt_rotm = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
+        self.gt_bbox_center = np.zeros((3,))
+        self.gt_bbox_size = 0
+        self.gt_uv = np.array([0, 0, 1], dtype=np.float32)
+        self.gt_z = 0
+
+        # estimated states
+        self.est_bbox_center = np.zeros((2, self.cfg_list[0].PF.N_PROCESS))
+        self.est_bbox_size = np.zeros((self.cfg_list[0].PF.N_PROCESS,))
+        self.est_bbox_weights = np.zeros((self.cfg_list[0].PF.N_PROCESS,))
+
+        # for logging
+        self.log_err_t = []
+        self.log_err_tx = []
+        self.log_err_ty = []
+        self.log_err_tz = []
+        self.log_err_rx = []
+        self.log_err_ry = []
+        self.log_err_rz = []
+        self.log_err_r = []
+        self.log_err_t_star = []
+        self.log_err_r_star = []
+        self.log_max_sim = []
+        self.log_dir = './'
+        self.log_created = False
+        self.log_pose = None
+        self.log_error = None
+
+        # posecnn prior
+        self.prior_uv = [0, 0, 1]
+        self.prior_z = 0
+        self.prior_t = np.array([0, 0, 0], dtype=np.float32)
+        self.prior_R = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
+
+        # flags for experiments
+        self.exp_with_mask = True
+        self.step = 0
+        self.iskf = False
+        self.init_step = False
+        self.save_uncertainty = False
+        self.show_prior = False
+
+        # motion model
+        self.T_c1c0 = np.eye(4, dtype=np.float32)
+        self.T_o0o1 = np.eye(4, dtype=np.float32)
+        self.T_c0o = np.eye(4, dtype=np.float32)
+        self.T_c1o = np.eye(4, dtype=np.float32)
+        self.Tbr1 = np.eye(4, dtype=np.float32)
+        self.Tbr0 = np.eye(4, dtype=np.float32)
+        self.Trc = np.eye(4, dtype=np.float32)
+
+        # multiple object pose estimation (mope)
+        self.mope_Tbo_list = []
+        self.mope_pc_b_list = []
+        for i in range(len(self.rbpf_list)):
+            self.mope_Tbo_list.append(np.eye(4, dtype=np.float32))
+            self.mope_pc_b_list.append(None)
+
+        # evaluation module
+        self.cos_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
+
+        # relative poses
+        self.T_ob_o = []
+        self.rel_pose_flag = []
+        for i in range(len(self.obj_list)):
+            self.T_ob_o.append(np.eye(4, dtype=np.float32))
+            self.rel_pose_flag.append(False)
+
+        # for visualization
+        self.uv_init = None
+        self.z_init = None
+
+        self.image_recon = None
+        self.skip = False
 
     # specify the target object for tracking
     def set_target_obj(self, target_object):
@@ -210,6 +210,10 @@ class PoseRBPF:
         self.target_obj_encoder = self.aae_list[self.target_obj_idx]
         self.target_obj_codebook = self.codebook_list[self.target_obj_idx]
         self.target_obj_cfg = self.cfg_list[self.target_obj_idx]
+
+        self.target_obj_codebook_depth = self.codebook_list_depth[self.target_obj_idx]
+        self.target_box_sz = 2 * self.target_obj_cfg.TRAIN.U0 / self.target_obj_cfg.TRAIN.FU * \
+                             self.target_obj_cfg.TRAIN.RENDER_DIST[0]
 
         self.target_obj_cfg.PF.FU = self.intrinsics[0, 0]
         self.target_obj_cfg.PF.FV = self.intrinsics[1, 1]
@@ -259,9 +263,9 @@ class PoseRBPF:
         self.Trc = np.eye(4, dtype=np.float32)
 
         # print
-        print('target object class is set to {}'.format(self.target_obj_cfg.PF.TRACK_OBJ))
+        print('target object is set to {}'.format(self.target_obj_cfg.PF.TRACK_OBJ))
 
-    def visualize_roi(self, image, uv, z, scale, step, phase='tracking', show_gt=False, error=True, uncertainty=False, show=False, color='g', skip=False):
+    def visualize_roi(self, image, uv, z, step, phase='tracking', show_gt=False, error=True, uncertainty=False, show=False, color='g', skip=False):
         image_disp = image
 
         # plt.figure()
@@ -290,7 +294,7 @@ class PoseRBPF:
             gt_bbox_size = 128 * self.target_obj_cfg.TRAIN.RENDER_DIST[0] / self.gt_z * self.target_obj_cfg.PF.FU / self.target_obj_cfg.TRAIN.FU * 0.15
 
         est_bbox_center = uv
-        est_bbox_size = 128 * self.target_obj_cfg.TRAIN.RENDER_DIST[0] * np.ones_like(z) / z * self.target_obj_cfg.PF.FU / self.target_obj_cfg.TRAIN.FU * scale
+        est_bbox_size = 128 * self.target_obj_cfg.TRAIN.RENDER_DIST[0] * np.ones_like(z) / z * self.target_obj_cfg.PF.FU / self.target_obj_cfg.TRAIN.FU
 
         if error:
             plt.plot(uv[:, 0], uv[:, 1], 'co', markersize=2)
@@ -455,7 +459,7 @@ class PoseRBPF:
                                                              (n_particles, 2))
 
     # initialize PoseRBPF
-    def initialize_poserbpf(self, image, intrinsics, uv_init, n_init_samples, scale_prior, depth=None):
+    def initialize_poserbpf(self, image, intrinsics, uv_init, n_init_samples, z_init=None, depth=None):
         # sample around the center of bounding box
         uv_h = np.array([uv_init[0], uv_init[1], 1])
         uv_h = np.repeat(np.expand_dims(uv_h, axis=0), n_init_samples, axis=0)
@@ -463,33 +467,36 @@ class PoseRBPF:
                                          (n_init_samples, 2))
         uv_h[:, 0] = np.clip(uv_h[:, 0], 0, image.shape[1])
         uv_h[:, 1] = np.clip(uv_h[:, 1], 0, image.shape[0])
+
         self.uv_init = uv_h.copy()
 
-        uv_h_int = uv_h.astype(int)
-        uv_h_int[:, 0] = np.clip(uv_h_int[:, 0], 0, image.shape[1] - 1)
-        uv_h_int[:, 1] = np.clip(uv_h_int[:, 1], 0, image.shape[0] - 1)
-        depth_np = depth.numpy()
-        z = depth_np[uv_h_int[:, 1], uv_h_int[:, 0], 0]
-        z = np.expand_dims(z, axis=1)
-        z[z > 0] += np.random.uniform(-0.25, 0.05, z[z > 0].shape)
-        z[z == 0] = np.random.uniform(0.5, 1.5, z[z == 0].shape)
+        if depth is not None:
+            uv_h_int = uv_h.astype(int)
+            uv_h_int[:, 0] = np.clip(uv_h_int[:, 0], 0, image.shape[1] - 1)
+            uv_h_int[:, 1] = np.clip(uv_h_int[:, 1], 0, image.shape[0] - 1)
+            depth_np = depth.numpy()
+            z = depth_np[uv_h_int[:, 1], uv_h_int[:, 0], 0]
+            z = np.expand_dims(z, axis=1)
+            z[z > 0] += np.random.uniform(-0.3, 0.3, z[z > 0].shape)
+            z[z == 0] = np.random.uniform(0.5, 1.5, z[z == 0].shape)
+        else:
+            # sample around z
+            if z_init == None:
+                z = np.random.uniform(0.5, 1.5, (n_init_samples, 1))
+            else:
+                z = np.random.uniform(z_init - 0.2, z_init + 0.2, (n_init_samples, 1))
+
         self.z_init = z.copy()
-
-        scale_h = np.array([scale_prior])
-        scale_h = np.repeat(np.expand_dims(scale_h, axis=0), n_init_samples, axis=0)
-        scale_h += np.random.randn(n_init_samples, 1) * 0.05
-
         # evaluate translation
-        distribution = self.evaluate_particles(depth, uv_h, z, scale_h, self.target_obj_cfg.TRAIN.RENDER_DIST[0],
-                                               0.1, depth,
-                                               debug_mode=True)
+        distribution = self.evaluate_particles(image, uv_h, z,
+                                               self.target_obj_cfg.TRAIN.RENDER_DIST[0], 0.1, depth=depth,
+                                               initialzation=True)
 
         # find the max pdf from the distribution matrix
         index_star = my_arg_max(distribution)
         uv_star = uv_h[index_star[0], :]  # .copy()
         z_star = z[index_star[0], :]  # .copy()
-        scale_star = scale_h[index_star[0], :]
-        self.rbpf.update_trans_star_uvz(uv_star, z_star, scale_star, intrinsics)
+        self.rbpf.update_trans_star_uvz(uv_star, z_star, intrinsics)
         distribution[index_star[0], :] /= torch.sum(distribution[index_star[0], :])
         self.rbpf.rot = distribution[index_star[0], :].view(1, 1, 37, 72, 72).repeat(self.rbpf.n_particles, 1, 1, 1, 1)
 
@@ -497,110 +504,173 @@ class PoseRBPF:
         self.rbpf.rot_bar = self.rbpf.rot_star
         self.rbpf.uv_bar = uv_star
         self.rbpf.z_bar = z_star
-        self.rbpf.scale_star = scale_star
         self.rbpf_init_max_sim = self.log_max_sim[-1]
 
     # evaluate particles according to the RGB(D) images
     def evaluate_particles(self, image,
-                           uv, z, scale,
+                           uv, z,
                            render_dist, gaussian_std,
-                           depth,
-                           debug_mode=False):
+                           depth, mask=None,
+                           initialzation=False):
 
-        # crop the rois from input depth image
-        images_roi_cuda = trans_zoom_uvz_cuda(depth.detach(), uv, z, scale,
-                                                self.target_obj_cfg.PF.FU,
-                                                self.target_obj_cfg.PF.FV,
-                                                render_dist).detach()
+        image = torch.cat((image.float(), depth.clone().float()), dim=2)
+        z_tensor = torch.from_numpy(z).float().cuda().unsqueeze(2).unsqueeze(3)
 
-        # normalize the depth
-        n_particles = z.shape[0]
-        z_cuda = torch.from_numpy(z).float().cuda().unsqueeze(2).unsqueeze(3)
-        scale_cuda = torch.from_numpy(scale).float().cuda().unsqueeze(2).unsqueeze(3)
-        images_roi_cuda = (images_roi_cuda - z_cuda) / scale_cuda + 0.5
-        images_roi_cuda = torch.clamp(images_roi_cuda, 0, 1)
+        if initialzation:
+            # crop the input image according to uv z
+            images_roi_cuda, scale_roi = trans_zoom_uvz_cuda(image.detach(), uv, z,
+                                                             self.target_obj_cfg.PF.FU,
+                                                             self.target_obj_cfg.PF.FV,
+                                                             render_dist, out_size=256)
 
-        # forward passing
-        codes = self.target_obj_encoder.forward(images_roi_cuda).view(n_particles, -1).detach()
+            # just crop in the center
+            roi_info = torch.zeros(images_roi_cuda.size(0), 5).float().cuda()
+            roi_info[:, 0] = torch.arange(images_roi_cuda.size(0))
+            roi_info[:, 1] = 128.0 - 128.0 / 2
+            roi_info[:, 2] = 128.0 - 128.0 / 2
+            roi_info[:, 3] = 128.0 + 128.0 / 2
+            roi_info[:, 4] = 128.0 + 128.0 / 2
+
+            # compute the codes
+            codes, codes_depth = self.target_obj_encoder.forward(images_roi_cuda.detach(),
+                                                                            roi_info.clone(),
+                                                                            z_tensor,
+                                                                            self.target_box_sz)
+            codes = codes.detach().view(uv.shape[0], -1)
+            codes_depth = codes_depth.detach().view(uv.shape[0], -1)
+
+        else:
+            # compute mean uv and mean z and crop the image
+            uv_bar = np.mean(uv, axis=0, keepdims=True)
+            z_bar = np.mean(z, keepdims=True)
+            images_roi_cuda, scale_roi = trans_zoom_uvz_cuda(image.detach(), uv_bar, z_bar,
+                                                             self.target_obj_cfg.PF.FU,
+                                                             self.target_obj_cfg.PF.FV,
+                                                             render_dist, out_size=256)
+
+            # adjust rois according to the particles
+            delta_uv = (uv - uv_bar) / scale_roi[0, 0]
+            roi_centers = torch.from_numpy(
+                np.array([255.0 / 2, 255.0 / 2, 1], dtype=np.float32) + delta_uv).float().cuda()
+            delta_z = z / z_bar
+            roi_sizes = torch.from_numpy(128.0 / delta_z[:, 0]).float().cuda()
+            roi_info = torch.zeros(uv.shape[0], 5).float().cuda()
+            roi_info[:, 0] = 0
+            roi_info[:, 1] = roi_centers[:, 0] - roi_sizes / 2
+            roi_info[:, 2] = roi_centers[:, 1] - roi_sizes / 2
+            roi_info[:, 3] = roi_centers[:, 0] + roi_sizes / 2
+            roi_info[:, 4] = roi_centers[:, 1] + roi_sizes / 2
+
+            # computer the codes
+            codes, codes_depth = self.target_obj_encoder.forward(images_roi_cuda.detach(),
+                                                                                roi_info.clone(),
+                                                                                z_tensor,
+                                                                                self.target_box_sz)
+            codes = codes.detach().view(uv.shape[0], -1)
+            codes_depth = codes_depth.detach().view(uv.shape[0], -1)
 
         # compute the similarity between particles' codes and the codebook
-        cosine_distance_matrix = self.aae_full.compute_distance_matrix(codes, self.target_obj_codebook)
+        cosine_distance_matrix_depth = self.aae_full.compute_distance_matrix(codes_depth,
+                                                                             self.target_obj_codebook_depth)
+        cosine_distance_matrix_rgb = self.aae_full.compute_distance_matrix(codes, self.target_obj_codebook)
+        max_rgb = torch.max(cosine_distance_matrix_rgb)
+        max_depth = torch.max(cosine_distance_matrix_depth)
+        self.max_sim_rgb = max_rgb.cpu().numpy()
+        self.max_sim_depth = max_depth.cpu().numpy()
+        cosine_distance_matrix = cosine_distance_matrix_rgb * 0.5 + cosine_distance_matrix_depth * 0.5
 
         # get the maximum similarity for each particle
         v_sims, i_sims = torch.max(cosine_distance_matrix, dim=1)
-
         self.cos_dist_mat = v_sims
 
-        # compute distribution from similarity
-        max_sim_all, i_sim_all = torch.max(v_sims, dim=0)
-        pdf_matrix = mat2pdf(cosine_distance_matrix/max_sim_all, 1, gaussian_std)
+        # evaluate particles with depth images
+        depth_scores = torch.from_numpy(np.ones_like(z)).cuda().float()
+        if depth is not None:
+            if initialzation:
+                depth_scores = self.renderer.Evaluate_Depths_Init(cls_id=self.target_obj_idx,
+                                                                  depth=depth, uv=uv, z=z,
+                                                                  q_idx=i_sims.cpu().numpy(),
+                                                                  intrinsics=self.intrinsics,
+                                                                  render_dist=render_dist, codepose=self.rbpf_codepose,
+                                                                  delta=self.target_obj_cfg.PF.DEPTH_DELTA,
+                                                                  tau=self.target_obj_cfg.PF.DEPTH_TAU,
+                                                                  mask=mask)
+                depth_scores = torch.from_numpy(depth_scores).float().cuda()
+            else:
+                depth_scores, vis_ratio = self.renderer.Evaluate_Depths_Tracking(rbpf=self.rbpf,
+                                                                                 cls_id=self.target_obj_idx,
+                                                                                 depth=depth, uv=uv, z=z,
+                                                                                 q_idx=i_sims.cpu().numpy(),
+                                                                                 intrinsics=self.intrinsics,
+                                                                                 render_dist=render_dist,
+                                                                                 codepose=self.rbpf_codepose,
+                                                                                 delta=self.target_obj_cfg.PF.DEPTH_DELTA,
+                                                                                 tau=self.target_obj_cfg.PF.DEPTH_TAU,
+                                                                                 rbpf_ready=self.rbpf_ok,
+                                                                                 mask=mask
+                                                                                 )
+                max_vis_ratio = torch.max(vis_ratio).cpu().numpy()
+                self.max_vis_ratio = max_vis_ratio
+
+            # reshape the depth score
+            if torch.max(depth_scores) > 0:
+                depth_scores = depth_scores / torch.max(depth_scores)
+                depth_scores = mat2pdf(depth_scores, 1.0, self.target_obj_cfg.PF.DEPTH_STD)
+            else:
+                depth_scores = torch.ones_like(depth_scores)
+                depth_scores /= torch.sum(depth_scores)
+
+        max_sim_all = torch.max(v_sims)
+        pdf_matrix = mat2pdf(cosine_distance_matrix / max_sim_all, 1, gaussian_std)
+
+        # combine RGB and D
+        pdf_matrix = torch.mul(pdf_matrix, depth_scores)
+
+        # determine system failure
+        if max_sim_all < 0.6:
+            self.rbpf_ok = False
 
         self.log_max_sim.append(max_sim_all)
 
-        # if self.log_max_sim[-1] < 0.7:
-        #     self.rbpf_ok = False
-
-        # visualize reconstruction
-        if debug_mode:
-            depth_recon = self.aae_full.decoder.forward(codes).detach()
-            depth_recon_disp = depth_recon[i_sim_all][0].cpu().numpy()
-            depth_input_disp = images_roi_cuda[i_sim_all][0].cpu().numpy()
-            depth_disp = depth[:, :, 0].cpu().numpy()
-            plt.figure()
-            plt.subplot(1, 3, 1)
-            plt.imshow(depth_input_disp)
-            plt.subplot(1, 3, 2)
-            plt.imshow(depth_recon_disp)
-            plt.subplot(1, 3, 3)
-            plt.imshow(depth_disp)
-            plt.plot(self.prior_uv[0], self.prior_uv[1], 'co', markersize=2)
-            plt.show()
-
-
         return pdf_matrix
 
-    def debug_gt_particles(self, n_gt_particles):
-        self.rbpf.uv[-n_gt_particles:] = np.repeat([self.gt_uv], n_gt_particles, axis=0)
-        self.rbpf.z[-n_gt_particles:] = np.ones_like(self.rbpf.z[-n_gt_particles:]) * self.gt_z
-        self.rbpf.scale[-n_gt_particles:] = np.ones_like(self.rbpf.z[-n_gt_particles:]) * 0.2
-
     # filtering
-    def process_poserbpf(self, image, intrinsics, use_detection_prior=True, depth=None, debug_mode=False):
+    def process_poserbpf(self, image, intrinsics, depth=None, mask=None, apply_motion_prior=False):
 
         # propagation
-        uv_noise = self.target_obj_cfg.PF.UV_NOISE
-        z_noise = self.target_obj_cfg.PF.Z_NOISE
-        self.rbpf.add_noise_r3(uv_noise, z_noise)
-        self.rbpf.add_noise_rot()
-
-        # poserbpf++
-        if use_detection_prior and self.prior_uv[0] > 0 and self.prior_uv[1] > 0:
-            self.use_detection_priors(int(self.rbpf.n_particles / 2))
-
-        ### debugging lines: injecting gt particles ###
-        # self.debug_gt_particles(self.rbpf.n_particles)
-        ### end debugging lines: injecting gt particles ###
+        if apply_motion_prior:
+            self.rbpf.propagate_particles(self.T_c1c0, self.T_o0o1, 0, 0, intrinsics)
+            uv_noise = self.target_obj_cfg.PF.UV_NOISE
+            z_noise = self.target_obj_cfg.PF.Z_NOISE
+            self.rbpf.add_noise_r3(uv_noise, z_noise)
+            self.rbpf.add_noise_rot()
+        else:
+            uv_noise = self.target_obj_cfg.PF.UV_NOISE
+            z_noise = self.target_obj_cfg.PF.Z_NOISE
+            self.rbpf.add_noise_r3(uv_noise, z_noise)
+            self.rbpf.add_noise_rot()
 
         # compute pdf matrix for each particle
-        est_pdf_matrix = self.evaluate_particles(depth, self.rbpf.uv, self.rbpf.z, self.rbpf.scale,
-                                                   self.target_obj_cfg.TRAIN.RENDER_DIST[0],
-                                                   self.target_obj_cfg.PF.WT_RESHAPE_VAR,
-                                                   depth, debug_mode=debug_mode)
+        est_pdf_matrix = self.evaluate_particles(image, self.rbpf.uv, self.rbpf.z,
+                                               self.target_obj_cfg.TRAIN.RENDER_DIST[0],
+                                               self.target_obj_cfg.PF.WT_RESHAPE_VAR,
+                                               depth=depth,
+                                               mask=mask, initialzation=False)
+
 
         # most likely particle
         index_star = my_arg_max(est_pdf_matrix)
-        uv_star = self.rbpf.uv[index_star[0], :].copy()
-        z_star = self.rbpf.z[index_star[0], :].copy()
-        scale_star = self.rbpf.scale[index_star[0], :].copy()
-        self.rbpf.update_trans_star(uv_star, z_star, intrinsics)
+        self.rbpf.update_trans_star(self.rbpf.uv[index_star[0], :], self.rbpf.z[index_star[0], :], intrinsics)
         self.rbpf.update_rot_star_R(quat2mat(self.rbpf_codepose[index_star[1]][3:]))
 
         # match rotation distribution
-        self.rbpf.rot = torch.clamp(self.rbpf.rot, 1e-6, 1)
+        self.rbpf.rot = torch.clamp(self.rbpf.rot, 1e-5, 1)
         rot_dist = torch.exp(torch.add(torch.log(est_pdf_matrix), torch.log(self.rbpf.rot.view(self.rbpf.n_particles, -1))))
         normalizers = torch.sum(rot_dist, dim=1)
 
         normalizers_cpu = normalizers.cpu().numpy()
+        if np.sum(normalizers_cpu) == 0:
+            return 0
         self.rbpf.weights = normalizers_cpu / np.sum(normalizers_cpu)
 
         rot_dist /= normalizers.unsqueeze(1).repeat(1, self.target_obj_codebook.size(0))
@@ -611,9 +681,6 @@ class PoseRBPF:
         # resample
         self.rbpf.resample_ddpf(self.rbpf_codepose, intrinsics, self.target_obj_cfg.PF)
 
-        # check if we need to reset the rotation expectation
-        # self.rbpf.check_rot_expectation()
-
         # visualization
         self.est_bbox_weights = self.rbpf.weights
         self.est_bbox_center = self.rbpf.uv
@@ -621,11 +688,7 @@ class PoseRBPF:
 
         return 0
 
-    # run dataset
-    def run_nocs_dataset(self, val_dataset, sequence):
-
-        if self.aae_full.angle_diff.shape[0] != 0:
-            self.aae_full.angle_diff = np.array([])
+    def run_dataset(self, val_dataset, sequence, only_track_kf=False, kf_skip=1):
 
         self.log_err_r = []
         self.log_err_r_star = []
@@ -639,13 +702,20 @@ class PoseRBPF:
                                                     shuffle=False, num_workers=0)
         steps = len(val_dataset)
         step = 0
+        kf_step = 0
 
         for inputs in val_generator:
 
-            if len(inputs) == 8:
+            if len(inputs) == 12:
                 if step == 0:
-                    print('RUNNING NOCS Real DATASET ! ')
-                images, poses_gt, intrinsics, depths, masks, file_names, scale_gt, bbox = inputs
+                    print('RUNNING YCB DATASET ! ')
+                images, depths, poses_gt, intrinsics, class_mask, file_name, is_kf, \
+                center_posecnn, z_posecnn, t_posecnn, q_posecnn, masks = inputs
+
+                self.prior_uv = np.array([center_posecnn[0, 0], center_posecnn[0, 1], 1], dtype=np.float32)
+                self.prior_z = z_posecnn[0].numpy().astype(np.float32)
+                self.prior_t = t_posecnn[0].cpu().numpy()
+                self.prior_R = quat2mat(q_posecnn[0].cpu().numpy())
 
                 self.data_intrinsics = intrinsics[0].numpy()
                 self.intrinsics = intrinsics[0].numpy()
@@ -654,7 +724,7 @@ class PoseRBPF:
                 self.target_obj_cfg.PF.U0 = self.intrinsics[0, 2]
                 self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
 
-                self.data_with_est_center = False
+                self.data_with_est_center = True
                 self.data_with_gt = True
 
                 # ground truth for visualization
@@ -667,27 +737,30 @@ class PoseRBPF:
                 gt_center = gt_center / gt_center[2]
                 self.gt_uv[:2] = gt_center[:2]
                 self.gt_z = self.gt_t[2]
-                self.gt_scale = scale_gt[0]
-
-                # depths = depths * masks
-                # self.prior_uv = self.gt_uv
-
-                self.prior_uv[0] = (bbox[0, 2] + bbox[0, 3])/2
-                self.prior_uv[1] = (bbox[0, 0] + bbox[0, 1])/2
 
             else:
                 print('*** INCORRECT DATASET SETTING! ***')
                 break
 
-            # render according to the ground truth
-            # image_render_cuda, depth_render_cuda = self.renderer.render_pose(self.gt_t, self.gt_rotm)
-            # depths = depth_render_cuda.detach().cpu().unsqueeze(0).unsqueeze(3)
-
-            # skip the unlabeled frames
-            if self.gt_z == 0:
-                self.data_with_gt = False
-
             self.step = step
+            self.iskf = is_kf
+
+            # skip kfs for larger baseline, motion model test
+            if only_track_kf:
+                if is_kf == 1:
+                    kf_step += 1
+                if is_kf == 0 or (kf_step+1) % kf_skip != 0:
+                    step += 1
+                    continue
+
+            # motion prior
+            self.T_c1o[:3, :3] = self.gt_rotm
+            self.T_c1o[:3, 3] = self.gt_t
+            if np.linalg.norm(self.T_c0o[:3, 3]) == 0:
+                self.T_c1c0 = np.eye(4, dtype=np.float32)
+            else:
+                self.T_c1c0 = np.matmul(self.T_c1o, np.linalg.inv(self.T_c0o))
+            self.T_c0o = self.T_c1o.copy()
 
             # initialization
             if step == 0 or self.rbpf_ok is False:
@@ -697,71 +770,57 @@ class PoseRBPF:
                 else:
                     depth_data = None
 
-                if self.prior_uv[0] > 0 and self.prior_uv[1] > 0:
-                    print('[Initialization] Initialize PoseRBPF with detection center ... ')
-                    self.initialize_poserbpf(images[0].detach(),
-                                             self.data_intrinsics,
-                                             self.prior_uv[:2],
-                                             self.target_obj_cfg.PF.N_INIT,
-                                             scale_prior=self.target_obj_cfg.PF.SCALE_PRIOR,
-                                             depth=depth_data)
+                print('[Initialization] Initialize PoseRBPF with detected center ... ')
+                if np.linalg.norm(self.prior_uv[:2] - self.gt_uv[:2]) > 40:
+                    self.prior_uv[:2] = self.gt_uv[:2]
 
-                    if self.data_with_gt:
-                        init_error = np.linalg.norm(self.rbpf.trans_star - self.gt_t)
-                        print('     Initial translation error = {:.4} cm'.format(init_error * 100))
-                        init_rot_error = abs(single_orientation_error(mat2quat(self.gt_rotm), mat2quat(self.rbpf.rot_star)))
-                        print('     Initial rotation error    = {:.4} deg'.format(init_rot_error * 57.3))
+                self.initialize_poserbpf(images[0].detach(), self.data_intrinsics,
+                                         self.prior_uv[:2], self.target_obj_cfg.PF.N_INIT,
+                                         depth=depth_data)
 
-                    self.rbpf_ok = True
+                if self.data_with_gt:
+                    init_error = np.linalg.norm(self.rbpf.trans_star - self.gt_t)
+                    print('     Initial translation error = {:.4} cm'.format(init_error * 100))
+                    init_rot_error = abs(single_orientation_error(mat2quat(self.gt_rotm), mat2quat(self.rbpf.rot_star)))
+                    print('     Initial rotation error    = {:.4} deg'.format(init_rot_error * 57.3))
+
+                self.rbpf_ok = True
+
+                # to avoid initialization to symmetric view and cause abnormal ADD results
+                if self.obj_ctg == 'ycb' and init_rot_error * 57.3 > 100:
+                    self.rbpf_ok = False
 
             # filtering
             if self.rbpf_ok:
                 torch.cuda.synchronize()
                 time_start = time.time()
-
-                if self.target_obj_cfg.PF.USE_DEPTH:
-                    depth_data = depths[0]
-                else:
-                    depth_data = None
-
-                self.process_poserbpf(images[0], intrinsics, depth=depth_data)
+                self.process_poserbpf(images[0], intrinsics, depth=depths[0])
                 torch.cuda.synchronize()
                 time_elapse = time.time() - time_start
-                print(
-                    '[Filtering: {}] {}/{} fps = {:.2f}, max sim = {:.2f}, scale est = {:.2f}'.format(
-                        self.target_obj,
-                        step + 1, steps,
-                        1 / time_elapse,
-                        self.log_max_sim[-1],
-                        self.rbpf.scale_bar[0]))
+                print('[Filtering] fps = ', 1 / time_elapse)
 
                 # logging
                 if self.data_with_gt:
                     self.display_result(step, steps)
-                    self.save_log(sequence, file_names, with_gt=self.data_with_gt)
+                    self.save_log(sequence, file_name)
 
                     # visualization
-                    is_kf = step % 10 == 0
                     if is_kf:
+                        image_disp = images[0].float().numpy()
 
-                        image_disp = images[0].cpu().numpy() / 255.0
-
-                        image_est_render, _ = self.renderer.render_pose(self.rbpf.trans_bar,
-                                                                         self.rbpf.rot_bar)
+                        image_est_render, _ = self.renderer.Render_Pose(self.intrinsics,
+                                                                         self.rbpf.trans_bar,
+                                                                         self.rbpf.rot_bar,
+                                                                         self.target_obj_idx)
 
                         image_est_disp = image_est_render[0].permute(1, 2, 0).cpu().numpy()
-                        image_est_disp[:, :, 0] *= 0
-                        image_est_disp[:, :, 2] *= 0
 
                         image_disp = 0.4 * image_disp + 0.6 * image_est_disp
-                        self.visualize_roi(image_disp, self.rbpf.uv, self.rbpf.z, self.rbpf.scale, step,
-                                           show_gt=True, error=False, uncertainty=self.show_prior,
-                                           skip=False)
+                        self.visualize_roi(image_disp, self.rbpf.uv, self.rbpf.z, step, error=False, uncertainty=self.show_prior)
                         plt.close()
 
             if step == steps-1:
                 break
             step += 1
 
-        self.log_pose.close()
         self.display_overall_result()

@@ -12,7 +12,6 @@ class particle_filter():
         self.uv = np.zeros((n_particles, 3), dtype=float)
         self.uv[:, 2] = 1
         self.z = np.zeros((n_particles, 1), dtype=float)
-        self.scale = np.zeros((n_particles, 1), dtype=float)
 
         # rotation distribution
         # discretize the so3 into space with 5 degrees interval, elevation - azimuth - in plane rotation
@@ -39,14 +38,12 @@ class particle_filter():
         # star
         self.uv_star = [0, 0, 1]
         self.z_star = 0
-        self.scale_star = 0.15
         self.rot_star = np.identity(3)
         self.trans_star = [0, 0, 0]
 
         # expectation
         self.uv_bar = [0, 0, 1]
         self.z_bar = 0
-        self.scale_bar = 0.15
         self.trans_bar = [0, 0, 0]
         self.rot_bar = np.identity(3)
         self.rot_bar_prev = np.identity(3)
@@ -125,11 +122,10 @@ class particle_filter():
         idx = (view_diff_max < threshold).nonzero()
         return idx
 
-    def update_trans_star_uvz(self, uv_star, z_star, scale_star, intrinsics):
+    def update_trans_star_uvz(self, uv_star, z_star, intrinsics):
         self.uv_star_prev = self.uv_star
         self.uv_star = uv_star
         self.z_star = z_star
-        self.scale_star = scale_star
 
         self.trans_star_prev = self.trans_star
 
@@ -140,7 +136,6 @@ class particle_filter():
 
         self.uv = np.repeat(np.expand_dims(uv_star, axis=0), self.n_particles, axis=0)
         self.z = np.repeat([z_star], self.n_particles, axis=0)
-        self.scale = np.repeat([scale_star], self.n_particles, axis=0)
 
     def update_trans_star(self, uv_star, z_star, intrinsics):
         self.uv_star_prev = self.uv_star
@@ -184,7 +179,6 @@ class particle_filter():
         self.rot = self.rot[indexes]
         self.uv = self.uv[indexes]
         self.z = self.z[indexes]
-        self.scale = self.scale[indexes]
         self.weights = np.ones((self.n_particles,), dtype=float) / self.n_particles
 
     def resample_trans(self, intrinsics):
@@ -253,7 +247,6 @@ class particle_filter():
         self.delta_z = np.mean(self.z, axis=0) - self.z_bar
         self.uv_bar = np.mean(self.uv, axis=0)
         self.z_bar = np.mean(self.z, axis=0)
-        self.scale_bar = np.mean(self.scale, axis=0)
         self.trans_bar = back_project(self.uv_bar, intrinsics, self.z_bar).squeeze(1)
 
         # get the top 100 and compute the weighted mean
@@ -342,8 +335,6 @@ class particle_filter():
         self.uv[:, :2] += np.random.randn(self.n_particles, 2) * uv_noise
         self.z += self.delta_z * self.cfg_pf.MOTION_T_FACTOR
         self.z += np.random.randn(self.n_particles, 1) * z_noise
-        self.scale += np.random.randn(self.n_particles, 1) * 0.005
-        self.scale = np.clip(self.scale, 0.15, 0.6)
 
     def add_noise_so3(self, rot_noise):
         for i in range(self.n_particles):

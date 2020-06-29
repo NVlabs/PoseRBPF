@@ -13,14 +13,14 @@ class render_wrapper:
         assert model_ctg in ['ycb', 'tless'], "model {} is not supported".format(model_ctg)
         for item in models:
             if model_ctg == 'ycb':
-                if os.path.exists('{}/models/{}/texture_map.png'.format(model_dir, item)):
-                    obj_paths.append('{}/models/{}/textured_simple.obj'.format(model_dir, item))
-                    texture_paths.append('{}/models/{}/texture_map.png'.format(model_dir, item))
+                if os.path.exists('{}/ycb_models/{}/texture_map.png'.format(model_dir, item)):
+                    obj_paths.append('{}/ycb_models/{}/textured_simple.obj'.format(model_dir, item))
+                    texture_paths.append('{}/ycb_models/{}/texture_map.png'.format(model_dir, item))
                 else:
-                    obj_paths.append('{}/models/{}/textured_simple.ply'.format(model_dir, item))
+                    obj_paths.append('{}/ycb_models/{}/textured_simple.ply'.format(model_dir, item))
                     texture_paths.append(''.format(model_dir, item))
             elif model_ctg == 'tless':
-                obj_paths.append('{}/models_cad_color_hd/{}.ply'.format(model_dir, item))
+                obj_paths.append('{}/tless_models/{}.ply'.format(model_dir, item))
                 texture_paths.append(''.format(model_dir, item))
 
         print(obj_paths)
