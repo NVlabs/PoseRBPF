@@ -34,91 +34,24 @@ def load_gt(path):
                     gt['cam_t_m2c'] = np.array(gt['cam_t_m2c']).reshape((3, 1))
     return gts
 
-def load_depth(path):
-    # PyPNG library is used since it allows to save 16-bit PNG
-    r = png.Reader(filename=path)
-    im = np.vstack(map(np.uint16, r.asDirect()[2])).astype(np.float32)
-    return im
+def load_depth(depth_path):
+    depth = cv2.imread(depth_path, -1)
 
-class TLessVideoSeqDataset(data.Dataset):
-    def __init__(self, class_ids, object_names, class_model_num, path, list_file):
-        self.path = path
+    if len(depth.shape) == 3:
+        depth16 = np.uint16(depth[:, :, 1]*256) + np.uint16(depth[:, :, 2])
+        depth16 = depth16.astype(np.uint16)
+    elif len(depth.shape) == 2 and depth.dtype == 'uint16':
+        depth16 = depth
+    else:
+        assert False, '[ Error ]: Unsupported depth type.'
 
-        list_file = open(list_file)
-        name_list = list_file.read().splitlines()
+    return depth16
 
-        file_start = name_list[0]
-        file_end = name_list[1]
 
-        start_num = int(file_start.split('/')[2])
-        end_num = int(file_end.split('/')[2])
-
-        file_num = np.arange(start_num, end_num+1)
-
-        file_list = []
-        for i in range(len(file_num)):
-            file_list.append(file_start.split('/')[0]+'/'+file_start.split('/')[1]+'/{:04}'.format(file_num[i]))
-
-        self.file_list = file_list
-
-        self.files = [path+item+'.png' for item in file_list]
-
-        with open('./datasets/tless_classes.txt', 'r') as class_name_file:
-            self.class_names_all = class_name_file.read().split('\n')
-
-        # todo: implementation of multiple object, may just extend the dataset size
-        assert len(object_names)==1, "current only support loading the information for one object !!!"
-        self.object_names = object_names
-        self.class_ids = class_ids
-        self.class_model_number = class_model_num
-
-        self.file_gt_poses = path+file_start.split('/')[0]+'/gt.yml'
-        self.file_cam_info = path+file_start.split('/')[0]+'/info.yml'
-
-        self.gt_poses = load_gt(self.file_gt_poses)
-        self.cam_infos = load_info(self.file_cam_info)
-
-        # print(self.gt_poses[0][0]['obj_id'])
-
-        # index_obj = [ind for ind, obj in enumerate(data['objects']) if obj['class'][:-4] == object_name]
-
-        self.objId = int(self.object_names[0][-2:])
-
-    def __len__(self):
-        return len(self.files)
-
-    def __getitem__(self, idx):
-        image, pose, intrinsics, bbox = self.load(idx)
-
-        class_info = torch.zeros(128, 128, self.class_model_number)
-        class_info[:, :, self.class_ids[0]] = 1
-        instance_mask = torch.zeros(3 * self.class_model_number)
-        instance_mask[self.class_ids[0]*3 : self.class_ids[0]*3 + 3] = 1
-        class_mask = (instance_mask==1)
-
-        is_kf = True
-
-        return image, pose, intrinsics, class_info.permute(2, 0, 1), class_mask, self.class_ids[0], self.file_list[idx], is_kf
-
-    def load(self, idx):
-        img = np.array(Image.open(self.files[idx]))
-        gt_pose = self.gt_poses[idx]
-        cam_info = self.cam_infos[idx]
-
-        intrinsics = cam_info['cam_K']
-
-        index_obj = [ind for ind, obj in enumerate(gt_pose) if obj['obj_id'] == self.objId]
-
-        pose = np.zeros((3,4))
-        pose[:, :3] = gt_pose[index_obj[0]]['cam_R_m2c']
-        pose[:, 3] = gt_pose[index_obj[0]]['cam_t_m2c'].squeeze(1)/1000.0
-
-        bbox = gt_pose[index_obj[0]]['obj_bb']
-
-        return img, pose, intrinsics, bbox
-
-class TLessVideoSeqDatasetWithBBox(data.Dataset):
-    def __init__(self, class_ids, object_names, class_model_num, path, list_file, bbox_path='/home/xinke/Documents/tless_retina_preds/'):
+class tless_dataset(data.Dataset):
+    def __init__(self, class_ids, object_names, class_model_num, path, list_file,
+                 detection_path='./detections/tless_retina_detections/'):
+        self.dataset_type = 'tless'
         self.path = path
 
         list_file = open(list_file)
@@ -146,30 +79,21 @@ class TLessVideoSeqDatasetWithBBox(data.Dataset):
         with open('./datasets/tless_classes.txt', 'r') as class_name_file:
             self.class_names_all = class_name_file.read().split('\n')
 
-        # todo: implementation of multiple object, may just extend the dataset size
         assert len(object_names)==1, "current only support loading the information for one object !!!"
         self.object_names = object_names
         self.class_ids = class_ids
         self.class_model_number = class_model_num
-
         print('class id = ', self.object_names)
-        # also load eccv results
-        self.eccv_obj_name = 'obj{}'.format(int(self.object_names[0][-2:]))
-        self.eccv_result_path = '/home/xinke/Documents/tless_pose_est_rgb/{}/'.format(self.eccv_obj_name)
 
         self.file_gt_poses = path+file_start.split('/')[0]+'/gt.yml'
         self.file_cam_info = path+file_start.split('/')[0]+'/info.yml'
 
-        self.file_bbox = bbox_path + '{}.yml'.format(file_start.split('/')[0])
+        self.file_bbox = detection_path + '{}.yml'.format(file_start.split('/')[0])
 
         self.gt_poses = load_gt(self.file_gt_poses)
         self.cam_infos = load_info(self.file_cam_info)
 
         self.bbox_estimation = load_gt(self.file_bbox)
-
-        # print(self.gt_poses[0][0]['obj_id'])
-
-        # index_obj = [ind for ind, obj in enumerate(data['objects']) if obj['class'][:-4] == object_name]
 
         self.objId = int(self.object_names[0][-2:])
 
@@ -177,7 +101,7 @@ class TLessVideoSeqDatasetWithBBox(data.Dataset):
         return len(self.files)
 
     def __getitem__(self, idx):
-        image, pose, intrinsics, bbox, eccv_t_est, eccv_R_est, depth = self.load(idx)
+        image, pose, intrinsics, bbox, depth = self.load(idx)
 
         class_info = torch.zeros(128, 128, self.class_model_number)
         class_info[:, :, self.class_ids[0]] = 1
@@ -185,21 +109,17 @@ class TLessVideoSeqDatasetWithBBox(data.Dataset):
         instance_mask[self.class_ids[0]*3 : self.class_ids[0]*3 + 3] = 1
         class_mask = (instance_mask==1)
 
-        # print(bbox)
-
         bbox = np.asarray(bbox, dtype=np.float32)
 
         is_kf = True
 
-        eccv_t_est = np.asarray(eccv_t_est, dtype=np.float32)
-        eccv_R_est = np.asarray(eccv_R_est, dtype=np.float32)
-
-
-        return image, pose, intrinsics, class_info.permute(2, 0, 1), class_mask, self.class_ids[0], \
-               self.file_list[idx], is_kf, bbox, eccv_t_est, eccv_R_est, depth
+        return image, depth, pose, intrinsics, class_mask, self.file_list[idx], is_kf, bbox
 
     def load(self, idx):
         img = np.array(Image.open(self.files[idx]))
+
+        img = img.astype(np.float32) / 255.0
+
         gt_pose = self.gt_poses[idx]
         cam_info = self.cam_infos[idx]
 
@@ -226,22 +146,6 @@ class TLessVideoSeqDatasetWithBBox(data.Dataset):
         else:
             bbox_est = [0.0, 0.0, 0.0, 0.0]
 
-        # load eccv result
-        # print(self.files[idx])
-        eccv_seq = self.files[idx][-15:-13]
-        eccv_frame = self.files[idx][-8:-4]
-        eccv_result_name = self.eccv_result_path + '{}/{}_{}.yml'.format(eccv_seq, eccv_frame, self.object_names[0][-2:])
-
-        eccv_t_est = np.array([0, 0, 2], dtype=np.float32)
-        eccv_R_est = np.array([[1,0,0], [0,1,0], [0,0,1]], dtype=np.float32)
-        if Path(eccv_result_name).is_file():
-            with open(eccv_result_name, 'r') as f:
-                eccv_result = yaml.load(f, Loader=yaml.CLoader)
-            eccv_est = eccv_result['ests'][0]
-
-            eccv_t_est = np.asarray(eccv_est['t'])/1000.0
-            eccv_R_est = np.asarray(eccv_est['R']).reshape((3,3))
-
-        return img, pose, intrinsics, bbox_est, eccv_t_est, eccv_R_est, depth
+        return img, pose, intrinsics, bbox_est, depth
 
 

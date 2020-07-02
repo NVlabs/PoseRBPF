@@ -1,6 +1,5 @@
-GPU_ID: 1
+GPU_ID: 0
 PF:
-
   USE_DEPTH: True
   UV_NOISE: 5.0
   Z_NOISE: 0.025

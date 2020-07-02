@@ -1,3 +1,11 @@
+# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
 from networks.aae_models import *
 import numpy.ma as ma
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
@@ -704,8 +712,7 @@ class PoseRBPF:
         kf_step = 0
 
         for inputs in val_generator:
-
-            if len(inputs) == 12:
+            if val_dataset.dataset_type == 'ycb':
                 if step == 0:
                     print('RUNNING YCB DATASET ! ')
                 images, depths, poses_gt, intrinsics, class_mask, file_name, is_kf, \
@@ -737,6 +744,34 @@ class PoseRBPF:
                 self.gt_uv[:2] = gt_center[:2]
                 self.gt_z = self.gt_t[2]
 
+            elif val_dataset.dataset_type == 'tless':
+                images, depths, poses_gt, intrinsics, class_mask, \
+                file_name, is_kf, bbox = inputs
+
+                self.prior_uv = np.array([bbox[0, 0] + 0.5 * bbox[0, 2], bbox[0, 1] + 0.5 * bbox[0, 3], 1],
+                                         dtype=np.float32)
+
+                self.data_intrinsics = intrinsics[0].numpy()
+                self.intrinsics = intrinsics[0].numpy()
+                self.target_obj_cfg.PF.FU = self.intrinsics[0, 0]
+                self.target_obj_cfg.PF.FV = self.intrinsics[1, 1]
+                self.target_obj_cfg.PF.U0 = self.intrinsics[0, 2]
+                self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
+                self.renderer.set_intrinsics(self.intrinsics, im_w=images.size(2), im_h=images.size(1))
+
+                self.data_with_est_center = True
+                self.data_with_gt = True
+
+                # ground truth for visualization
+                pose_gt = poses_gt.numpy()[0, :, :]
+                self.gt_t = pose_gt[:3, 3]
+                self.gt_rotm = pose_gt[:3, :3]
+                gt_center = np.matmul(intrinsics, self.gt_t)
+                if gt_center.shape[0] == 1:
+                    gt_center = gt_center[0]
+                gt_center = gt_center / gt_center[2]
+                self.gt_uv[:2] = gt_center[:2]
+                self.gt_z = self.gt_t[2]
             else:
                 print('*** INCORRECT DATASET SETTING! ***')
                 break

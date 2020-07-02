@@ -103,7 +103,7 @@ if __name__ == '__main__':
     target_obj = cfg.TEST.OBJECTS[0]
     target_cfg = pose_rbpf.set_target_obj(target_obj)
 
-    # evaluate the system
+    # test the system on ycb or tless datasets
     if args.dataset_name == 'ycb_video':
         test_list_file = './datasets/YCB/{}/seq{}.txt'.format(target_obj, args.n_seq)
         dataset_test = ycb_video_dataset(class_ids=[0],
@@ -111,16 +111,13 @@ if __name__ == '__main__':
                                          class_model_num=1,
                                          path=args.dataset_dir,
                                          list_file=test_list_file)
-
         pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1)
-
-    # elif args.dataset_name == 'srl_video':
-    #     test_list_file = './datasets/SRL_Robot_Sequences/{}/seq{}.txt'.format(target_obj, args.n_seq)
-    #     dataset_test = SRLSeqDataset(class_ids=[0],
-    #                                  object_names=[target_obj],
-    #                                  class_model_num=1,
-    #                                  path=args.dataset_dir,
-    #                                  list_file=test_list_file,
-    #                                  camera=args.camera_type)
-    #     pose_rbpf.Run_SRL_Dataset(dataset_test, args.n_seq)
+    elif args.dataset_name == 'tless':
+        test_list_file = './datasets/TLess/{}/{}.txt'.format(target_obj, args.n_seq)
+        dataset_test = tless_dataset(class_ids=[0],
+                                     object_names=[target_obj],
+                                     class_model_num=1,
+                                     path=args.dataset_dir,
+                                     list_file=test_list_file)
+        pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1)
 

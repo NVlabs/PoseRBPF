@@ -16,8 +16,11 @@ from ycb_render.ycb_renderer import *
 import torch.nn.functional as F
 from config.config import cfg
 
+
 class ycb_video_dataset(data.Dataset):
-    def __init__(self, class_ids, object_names, class_model_num, path, list_file):
+    def __init__(self, class_ids, object_names, class_model_num, path, list_file,
+                 detection_path='./detections/posecnn_detections/'):
+        self.dataset_type = 'ycb'
         self.path = path
 
         list_file = open(list_file)
@@ -59,7 +62,7 @@ class ycb_video_dataset(data.Dataset):
         self.obj_idx = self.object_name_list.index(self.object_names[0])
 
         # posecnn for initialization
-        self.posecnn_results_dir = './detections/posecnn_detections/'
+        self.posecnn_results_dir = detection_path
 
     def __len__(self):
         return len(self.files)
