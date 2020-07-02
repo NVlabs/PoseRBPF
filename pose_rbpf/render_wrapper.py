@@ -23,8 +23,6 @@ class render_wrapper:
                 obj_paths.append('{}/tless_models/{}.ply'.format(model_dir, item))
                 texture_paths.append(''.format(model_dir, item))
 
-        print(obj_paths)
-
         self.obj_paths = obj_paths
         self.texture_paths = texture_paths
 
@@ -67,7 +65,7 @@ class render_wrapper:
         for model in models:
             self.model_idx.append(self.class_names_all.index(model) + 1)
 
-    def Set_Intrinsics(self, intrinsics, im_w=640, im_h=480):
+    def set_intrinsics(self, intrinsics, im_w=640, im_h=480):
         self.renderer.set_camera_default()
         self.renderer.set_projection_matrix(im_w, im_h,
                                             intrinsics[0, 0], intrinsics[1, 1],
@@ -76,8 +74,8 @@ class render_wrapper:
         self.im_w = im_w
         self.im_h = im_h
 
-    def Render_Pose(self, intrinsics, t, R, cls_id): # cls_id: target object index in the loaded classes
-        self.Set_Intrinsics(intrinsics, im_w=self.im_w, im_h=self.im_h)
+    def render_pose(self, intrinsics, t, R, cls_id): # cls_id: target object index in the loaded classes
+        self.set_intrinsics(intrinsics, im_w=self.im_w, im_h=self.im_h)
         t_v = t
         q_v = mat2quat(R)
         pose_v = np.zeros((7,))
@@ -95,8 +93,8 @@ class render_wrapper:
         depth_render = pc_cuda[:, :, 2]
         return frame_cuda, depth_render
 
-    def Render_Pose_Multiple(self, intrinsics, Tco_list, cls_id_list):
-        self.Set_Intrinsics(intrinsics)
+    def render_pose_multiple(self, intrinsics, Tco_list, cls_id_list):
+        self.set_intrinsics(intrinsics)
 
         # list of poses
         poses = []
@@ -130,7 +128,7 @@ class render_wrapper:
 
         return frame_cuda, depth_render, seg_est_np
 
-    def Estimate_Visibile_Points(self, T_co_est, cls_id, depth, render_dist, intrinsics,
+    def estimate_visibile_points(self, T_co_est, cls_id, depth, render_dist, intrinsics,
                                  delta=0.02, mask_input=None, output_cuda=True):
 
         t_v = T_co_est[:3, 3]
@@ -153,7 +151,7 @@ class render_wrapper:
         uv = np.expand_dims(uv, axis=0)
         z = np.array([[t_v[2]]])
 
-        render_roi_cuda, _ = trans_zoom_uvz_cuda(pc_cuda.flip(0), uv, z,
+        render_roi_cuda, _ = get_rois_cuda(pc_cuda.flip(0), uv, z,
                                                  intrinsics[0, 0], self.intrinsics[1, 1],
                                                  render_dist)
         if output_cuda:
@@ -174,7 +172,7 @@ class render_wrapper:
                 mask_input = None
 
         if mask_input is None:
-            pc_roi_cuda, _ = trans_zoom_uvz_cuda(pc_c_torch, uv, z, intrinsics[0, 0], intrinsics[1, 1],
+            pc_roi_cuda, _ = get_rois_cuda(pc_c_torch, uv, z, intrinsics[0, 0], intrinsics[1, 1],
                                                     render_dist)
             # compare the depth
             depth_meas_roi = pc_roi_cuda[0, 2, :, :].cpu().numpy()
@@ -197,7 +195,7 @@ class render_wrapper:
             pt0_valid = pc_roi_cuda[0, 0, :, :].cpu().numpy().flatten()[choose][:, np.newaxis].astype(np.float32)
             pt1_valid = pc_roi_cuda[0, 1, :, :].cpu().numpy().flatten()[choose][:, np.newaxis].astype(np.float32)
         else:
-            pc_roi_cuda, _ = trans_zoom_uvz_cuda(pc_c_torch, uv, z, intrinsics[0, 0], intrinsics[1, 1],
+            pc_roi_cuda, _ = get_rois_cuda(pc_c_torch, uv, z, intrinsics[0, 0], intrinsics[1, 1],
                                                  render_dist)
             # compare the depth
             depth_meas_roi = pc_roi_cuda[0, 2, :, :].cpu().numpy()
@@ -208,7 +206,7 @@ class render_wrapper:
             mask_prbpf = mask_depth_meas * mask_depth_render * mask_depth_vis
             visible_ratio_prbpf = np.sum(mask_prbpf) * 1.0 / (np.sum(mask_depth_render) * 1.0)
 
-            mask_roi_cuda, _ = trans_zoom_uvz_cuda(mask_input, uv, z, intrinsics[0, 0], intrinsics[1, 1],
+            mask_roi_cuda, _ = get_rois_cuda(mask_input, uv, z, intrinsics[0, 0], intrinsics[1, 1],
                                                    render_dist)
             mask_roi = mask_roi_cuda[0, 0, :, :].cpu().numpy()
             mask_input = ma.getmaskarray(ma.masked_equal(mask_roi, self.model_idx[cls_id]))
@@ -236,11 +234,11 @@ class render_wrapper:
 
         return ps_c, visible_ratio, mask_disp
 
-    def Estimate_Visibile_Points_Multi(self, Tco_list, cls_id_list, depth, intrinsics, mask_input,
+    def estimate_visibile_points_multi(self, Tco_list, cls_id_list, depth, intrinsics, mask_input,
                                         delta=0.02, output_cuda=True):
 
         # render with current pose
-        self.Set_Intrinsics(intrinsics)
+        self.set_intrinsics(intrinsics)
 
         # list of poses
         poses = []
@@ -299,17 +297,6 @@ class render_wrapper:
 
             mask_out_merge = mask_depth_meas * mask_seg_est * mask_seg_meas * mask_depth_meas * mask_depth_vis
 
-            # plt.figure()
-            # plt.subplot(2,2,1)
-            # plt.imshow(mask_out)
-            # plt.subplot(2,2,2)
-            # plt.imshow(mask_depth_meas)
-            # plt.subplot(2,2,3)
-            # plt.imshow(mask_seg_meas)
-            # plt.subplot(2,2,4)
-            # plt.imshow(mask_seg_est)
-            # plt.show()
-
             choose = mask_out_merge.flatten().nonzero()[0]
 
             pt2_valid = pt2_np.flatten()[choose][:, np.newaxis].astype(np.float32)
@@ -326,17 +313,17 @@ class render_wrapper:
         return pc_list
 
     # evaluate particles according to depth measurements
-    def Evaluate_Depths_Init(self, cls_id, depth, uv, z, q_idx, intrinsics, render_dist, codepose, delta=0.03, tau=0.05, mask=None):
+    def evaluate_depths_init(self, cls_id, depth, uv, z, q_idx, intrinsics, render_dist, codepose, delta=0.03, tau=0.05, mask=None):
 
         score = np.zeros_like(z)
 
         # crop rois
-        depth_roi_cuda, _ = trans_zoom_uvz_cuda(depth.detach(), uv, z, intrinsics[0, 0], intrinsics[1, 1],
+        depth_roi_cuda, _ = get_rois_cuda(depth.detach(), uv, z, intrinsics[0, 0], intrinsics[1, 1],
                                                  render_dist)
         depth_roi_np = depth_roi_cuda.cpu().numpy()
 
         if mask is not None:
-            mask_roi_cuda, _ = trans_zoom_uvz_cuda(mask.detach(), uv, z, intrinsics[0, 0], intrinsics[1, 1],
+            mask_roi_cuda, _ = get_rois_cuda(mask.detach(), uv, z, intrinsics[0, 0], intrinsics[1, 1],
                                                     render_dist)
             mask_roi_np = mask_roi_cuda.cpu().numpy()
 
@@ -354,7 +341,7 @@ class render_wrapper:
             pose_v[3:] = q_render[i]
             self.renderer.set_poses([pose_v])
             self.renderer.render([cls_id], frame_cuda, seg_cuda, pc2_tensor=pc_cuda)
-            render_roi_cuda, _ = trans_zoom_uvz_cuda(pc_cuda.flip(0),
+            render_roi_cuda, _ = get_rois_cuda(pc_cuda.flip(0),
                                                      np.array([[intrinsics[0, 2], intrinsics[1, 2], 1]]),
                                                      np.array([[render_dist]]),
                                                      intrinsics[0, 0], intrinsics[1, 1],
@@ -398,14 +385,14 @@ class render_wrapper:
         return score
 
     # evaluate particles according to depth measurements
-    def Evaluate_Depths_Tracking(self, rbpf, cls_id, depth, uv, z, q_idx, intrinsics, render_dist, codepose, rbpf_ready,
+    def evaluate_depths_tracking(self, rbpf, cls_id, depth, uv, z, q_idx, intrinsics, render_dist, codepose, rbpf_ready,
                         delta=0.03, tau=0.05, mask=None):
 
         if mask is not None:
             depth = depth.float() * mask
 
         # crop rois
-        depth_roi_cuda, _ = trans_zoom_uvz_cuda(depth.detach(), uv, z, intrinsics[0, 0], intrinsics[1, 1],
+        depth_roi_cuda, _ = get_rois_cuda(depth.detach(), uv, z, intrinsics[0, 0], intrinsics[1, 1],
                                                  render_dist)
         depth_meas_all = depth_roi_cuda[:, 0, :, :]
 
@@ -424,7 +411,7 @@ class render_wrapper:
             uv_crop = project(rbpf.trans_bar, intrinsics)
             uv_crop = np.repeat(np.expand_dims(uv_crop, axis=0), uv.shape[0], axis=0)
             z_crop = np.ones_like(z) * rbpf.trans_bar[2]
-            render_roi_cuda, _ = trans_zoom_uvz_cuda(pc_cuda.flip(0), uv_crop, z_crop,
+            render_roi_cuda, _ = get_rois_cuda(pc_cuda.flip(0), uv_crop, z_crop,
                                                       intrinsics[0, 0],
                                                       intrinsics[1, 1],
                                                       render_dist)
@@ -439,7 +426,7 @@ class render_wrapper:
                 pose_v[3:] = q_render[i]
                 self.renderer.set_poses([pose_v])
                 self.renderer.render([cls_id], frame_cuda, seg_cuda, pc_cuda)
-                render_roi_cuda, _ = trans_zoom_uvz_cuda(pc_cuda.flip(0),
+                render_roi_cuda, _ = get_rois_cuda(pc_cuda.flip(0),
                                                          np.array([[intrinsics[0, 2], intrinsics[1, 2], 1]]),
                                                          np.array([[render_dist]]),
                                                          intrinsics[0, 0], intrinsics[1, 1],
@@ -465,11 +452,6 @@ class render_wrapper:
         # compute visibility mask
         visibility_mask_cuda = estimate_visib_mask_cuda(depth_meas_all, depth_render_all, delta=delta)
 
-        # if mask is not None:
-        #     mask_roi_cuda, _ = trans_zoom_uvz_cuda(mask.detach(), uv, z, intrinsics[0, 0], intrinsics[1, 1],
-        #                                             render_dist)
-        #     visibility_mask_cuda = torch.mul(visibility_mask_cuda, mask_roi_cuda[:, 0, :, :] > 0)
-
         # compute scores
         # depth errors
         depth_error = torch.ones_like(depth_render_all).cuda()
@@ -490,61 +472,3 @@ class render_wrapper:
 
     def transform_points(self, Transformation, points):
         return torch.matmul(Transformation, points.permute(1, 0)).permute(1, 0)
-
-    def Evaluate_Depths_SDF(self, rbpf, cls_id, sdf_refiner, sdf_input, sdf_limits, depth, uv, z, q_idx, intrinsics, render_dist, codepose, rbpf_ready,
-                        delta=0.03, tau=0.05, mask_input=None):
-
-        if not (rbpf_ready and np.linalg.norm(rbpf.trans_bar) > 0):  # fast rendering for tracking
-            return torch.ones((uv.shape[0], 1), dtype=torch.float32).cuda()
-
-        # get visibility mask of the whole image
-        pose_v = np.zeros((7,))
-        frame_cuda = torch.cuda.FloatTensor(self.im_h, self.im_w, 4)
-        seg_cuda = torch.cuda.FloatTensor(self.im_h, self.im_w, 4)
-        pc_cuda = torch.cuda.FloatTensor(self.im_h, self.im_w, 4)
-        pose_v[:3] = rbpf.trans_bar
-        pose_v[3:] = mat2quat(rbpf.rot_bar)
-        self.renderer.set_poses([pose_v])
-        self.renderer.render([cls_id], frame_cuda, seg_cuda, pc2_tensor=pc_cuda)
-
-        # get visible points in camera frame
-        depth_meas = depth[:, :, 0].cuda().float()
-        depth_render = pc_cuda[:, :, 2]
-        visibility_mask_cuda = estimate_visib_mask_cuda(depth_meas, depth_render, delta=delta)
-        pt2 = depth_meas.unsqueeze(2)
-        pt0 = (self.xmap_full_torch - intrinsics[0, 2]) * pt2 / intrinsics[0, 0]
-        pt1 = (self.ymap_full_torch - intrinsics[1, 2]) * pt2 / intrinsics[1, 1]
-        pc_c_torch = torch.cat((pt0, pt1, pt2), dim=2)
-        pc_c_visible = pc_c_torch[visibility_mask_cuda.unsqueeze(2).repeat(1, 1, 3)].view(-1, 3)
-
-        print(pc_c_visible.size(0))
-
-        if pc_c_visible.size(0) < 200:
-            return torch.ones((uv.shape[0], 1), dtype=torch.float32).cuda()
-
-        # visibility_mask_disp = visibility_mask_cuda.cpu().float().numpy()
-        # plt.figure()
-        # plt.imshow(visibility_mask_disp)
-        # plt.show()
-
-        score = torch.zeros((uv.shape[0], 1), dtype=torch.float32).cuda()
-        for i in range(z.shape[0]):
-
-            # get most likely poses of the particles
-            Tco = torch.eye(4, dtype=torch.float32).cuda()
-            trans = back_project(uv[i], intrinsics, z[i])
-            q = codepose[q_idx[i]][3:]
-            rotm = quat2mat_numba(add_trans_q(trans, q))
-            Tco[:3, :3] = torch.from_numpy(rotm).float().cuda()
-            Tco[:3, 3] = torch.from_numpy(trans).float().cuda()
-
-            # for each particle, convert to object frame and get sdf
-            sdf_values = sdf_refiner.compute_sdf(Tco.cpu().numpy(), pc_c_visible, sdf_input, sdf_limits)
-            mean_sdf_value = torch.mean(torch.abs(sdf_values))
-
-            if mean_sdf_value > 0:
-                score[i] = 0.01 / mean_sdf_value
-
-        print(score)
-
-        return score

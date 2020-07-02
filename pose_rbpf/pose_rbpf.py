@@ -1,5 +1,4 @@
 from networks.aae_models import *
-from utils.se3 import *
 import numpy.ma as ma
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 import pdb
@@ -518,7 +517,7 @@ class PoseRBPF:
 
         if initialzation:
             # crop the input image according to uv z
-            images_roi_cuda, scale_roi = trans_zoom_uvz_cuda(image.detach(), uv, z,
+            images_roi_cuda, scale_roi = get_rois_cuda(image.detach(), uv, z,
                                                              self.target_obj_cfg.PF.FU,
                                                              self.target_obj_cfg.PF.FV,
                                                              render_dist, out_size=256)
@@ -543,7 +542,7 @@ class PoseRBPF:
             # compute mean uv and mean z and crop the image
             uv_bar = np.mean(uv, axis=0, keepdims=True)
             z_bar = np.mean(z, keepdims=True)
-            images_roi_cuda, scale_roi = trans_zoom_uvz_cuda(image.detach(), uv_bar, z_bar,
+            images_roi_cuda, scale_roi = get_rois_cuda(image.detach(), uv_bar, z_bar,
                                                              self.target_obj_cfg.PF.FU,
                                                              self.target_obj_cfg.PF.FV,
                                                              render_dist, out_size=256)
@@ -587,7 +586,7 @@ class PoseRBPF:
         depth_scores = torch.from_numpy(np.ones_like(z)).cuda().float()
         if depth is not None:
             if initialzation:
-                depth_scores = self.renderer.Evaluate_Depths_Init(cls_id=self.target_obj_idx,
+                depth_scores = self.renderer.evaluate_depths_init(cls_id=self.target_obj_idx,
                                                                   depth=depth, uv=uv, z=z,
                                                                   q_idx=i_sims.cpu().numpy(),
                                                                   intrinsics=self.intrinsics,
@@ -597,7 +596,7 @@ class PoseRBPF:
                                                                   mask=mask)
                 depth_scores = torch.from_numpy(depth_scores).float().cuda()
             else:
-                depth_scores, vis_ratio = self.renderer.Evaluate_Depths_Tracking(rbpf=self.rbpf,
+                depth_scores, vis_ratio = self.renderer.evaluate_depths_tracking(rbpf=self.rbpf,
                                                                                  cls_id=self.target_obj_idx,
                                                                                  depth=depth, uv=uv, z=z,
                                                                                  q_idx=i_sims.cpu().numpy(),
@@ -808,7 +807,7 @@ class PoseRBPF:
                     if is_kf:
                         image_disp = images[0].float().numpy()
 
-                        image_est_render, _ = self.renderer.Render_Pose(self.intrinsics,
+                        image_est_render, _ = self.renderer.render_pose(self.intrinsics,
                                                                          self.rbpf.trans_bar,
                                                                          self.rbpf.rot_bar,
                                                                          self.target_obj_idx)

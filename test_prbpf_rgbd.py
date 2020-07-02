@@ -1,6 +1,6 @@
 import argparse
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 from pose_rbpf.pose_rbpf import *
 from datasets.ycb_video_dataset import *
 from datasets.tless_dataset import *

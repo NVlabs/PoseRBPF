@@ -15,11 +15,14 @@ from numba import jit
 
 from utils.RoIAlign.layer_utils.roi_layers import ROIAlign
 
+
 def CropAndResizeFunction(image, rois):
     return ROIAlign((128, 128), 1.0, 0)(image, rois)
 
+
 def CropAndResizeFunction2x(image, rois):
     return ROIAlign((256, 256), 1.0, 0)(image, rois)
+
 
 def GaussianKernel3D(kernlen=3, nsig=1):
     # create nxn zeros
@@ -28,6 +31,7 @@ def GaussianKernel3D(kernlen=3, nsig=1):
     inp[kernlen//2, kernlen//2, kernlen//2] = 1
     # gaussian-smooth the dirac, resulting in a gaussian filter mask
     return sci_filter.gaussian_filter(inp, nsig)
+
 
 # pytorch argmax is slow
 def my_arg_max(input):
@@ -59,6 +63,7 @@ def pose_error(particles, pose_gt):
 
         return trans_error, np.abs(rot_error)
 
+
 def neff(weights):
         return 1. / np.sum(np.square(weights))
 
@@ -68,11 +73,8 @@ def resample_from_index(particles, weights, indexes):
         weights[:] = weights[indexes]
         weights.fill(1.0 / len(weights))
 
-def add_noise_se3(particles, trans_noise, rot_noise):
-    #   particles: nx3x4 tensor
-    #   trans_noise: 3x1 vector
-    #   rot_noise: 3x1 vector
 
+def add_noise_se3(particles, trans_noise, rot_noise):
     for i in range(particles.shape[0]):
         particles[i, :, 3] += np.multiply(np.random.randn(3), trans_noise)
         rot_noise_euler = np.multiply(np.random.randn(3), rot_noise)
@@ -88,15 +90,6 @@ def add_noise_so3(particles_rot, rot_noise):
 
 
 def skew(vector):
-    """
-    this function returns a numpy array with the skew symmetric cross product matrix for vector.
-    the skew symmetric cross product matrix is defined such that
-    np.cross(a, b) = np.dot(skew(a), b)
-
-    :param vector: An array like vector to create the skew symmetric cross product matrix for
-    :return: A numpy array of the skew symmetric cross product vector
-    """
-
     return np.array([[0, -vector[2], vector[1]],
                      [vector[2], 0, -vector[0]],
                      [-vector[1], vector[0], 0]])
@@ -158,7 +151,7 @@ def single_orientation_error_axes(q_gt, q_est):
     return d_angle * axis
 
 
-def add_trans_q(translation, q):
+def allo2ego_q(translation, q):
     Rc1o1 = quat2mat(q)
     tco = translation
     p = [0, 0, 1]
@@ -171,7 +164,7 @@ def add_trans_q(translation, q):
     return qco
 
 
-def add_trans_R(translation, R):
+def allo2ego_R(translation, R):
     Rc1o1 = R
     tco = translation
     p = [0, 0, 1]
@@ -183,15 +176,15 @@ def add_trans_R(translation, R):
     return Rc1o1
 
 
-def add_trans_Rs(translation, Rs):
+def allo2ego_Rs(translation, Rs):
     for i in range(Rs.shape[0]):
-        Rs[i, :, :] = add_trans_R(translation, Rs[i, :, :])
+        Rs[i, :, :] = allo2ego_R(translation, Rs[i, :, :])
 
-def add_trans_qs(translation, qs):
+def allo2ego_qs(translation, qs):
     for i in range(qs.shape[0]):
-        qs[i, :] = add_trans_q(translation, qs[i, :])
+        qs[i, :] = allo2ego_q(translation, qs[i, :])
 
-def compensate_trans_q(translation, q):
+def ego2allo_q(translation, q):
     Rc1o1 = quat2mat(q)
     tco = translation
     p = [0, 0, 1]
@@ -204,7 +197,7 @@ def compensate_trans_q(translation, q):
     return qco
 
 
-def compensate_trans_R(translation, R):
+def ego2allo_R(translation, R):
     Rc1o1 = R
     tco = translation
     p = [0, 0, 1]
@@ -215,7 +208,7 @@ def compensate_trans_R(translation, R):
     Rc1o1 = np.matmul(np.transpose(Rc), Rc1o1)
     return Rc1o1
 
-def trans_zoom_uvz_cuda(image, uvs, zs, pf_fu, pf_fv, target_distance=2.5, out_size=128):
+def get_rois_cuda(image, uvs, zs, pf_fu, pf_fv, target_distance=2.5, out_size=128):
     image = image.permute(2, 0, 1).float().unsqueeze(0).cuda()
 
     bbox_u = target_distance * (1 / zs) / cfg.TRAIN.FU * pf_fu * out_size / image.size(3)
@@ -239,105 +232,6 @@ def trans_zoom_uvz_cuda(image, uvs, zs, pf_fu, pf_fv, target_distance=2.5, out_s
     uv_scale = target_distance * (1 / zs) / cfg.TRAIN.FU * pf_fu
 
     return out, uv_scale
-
-def crop_and_resize(image, uvs, zs, pf_fu, pf_fv, target_distance=2.5, out_size=64):
-    bbox_u = target_distance * (1 / zs) / cfg.TRAIN.FU * pf_fu * out_size / image.size(3)
-    bbox_u = torch.from_numpy(bbox_u).cuda().float().squeeze(1)
-    bbox_v = target_distance * (1 / zs) / cfg.TRAIN.FV * pf_fv * out_size / image.size(2)
-    bbox_v = torch.from_numpy(bbox_v).cuda().float().squeeze(1)
-
-    center_uvs = torch.from_numpy(uvs).cuda().float()
-
-    center_uvs[:, 0] /= image.size(3)
-    center_uvs[:, 1] /= image.size(2)
-
-    boxes = torch.zeros(center_uvs.size(0), 5).cuda()
-    boxes[:, 1] = (center_uvs[:, 0] - bbox_u/2) * float(image.size(3))
-    boxes[:, 2] = (center_uvs[:, 1] - bbox_v/2) * float(image.size(2))
-    boxes[:, 3] = (center_uvs[:, 0] + bbox_u/2) * float(image.size(3))
-    boxes[:, 4] = (center_uvs[:, 1] + bbox_v/2) * float(image.size(2))
-
-    out = CropAndResizeFunction(image, boxes)
-
-    return out
-
-
-def trans_zoom_uvz_cpu(image, uv, z, fu, fv, u_shift=0, v_shift=0, target_distance=2.5, out_size=128):
-    obj_center_xy = uv.copy()
-
-    cbox_size_u = out_size * target_distance / z / cfg.TRAIN.FU * fu
-    cbox_size_v = out_size * target_distance / z / cfg.TRAIN.FV * fv
-
-    u_shift_im = u_shift * target_distance / z / cfg.TRAIN.FU * fu
-    v_shift_im = v_shift * target_distance / z / cfg.TRAIN.FV * fv
-
-    obj_center_xy[0] += u_shift_im
-    obj_center_xy[1] += v_shift_im
-
-    cbox_x = np.asarray([obj_center_xy[0] - cbox_size_u / 2, obj_center_xy[0] + cbox_size_u / 2]).astype(np.int)
-    cbox_x_clip = np.clip(cbox_x, 0, image.shape[1]-1).astype(np.int)
-    cbox_y = np.asarray([obj_center_xy[1] - cbox_size_v / 2, obj_center_xy[1] + cbox_size_v / 2]).astype(np.int)
-    cbox_y_clip = np.clip(cbox_y, 0, image.shape[0]-1).astype(np.int)
-
-    image_cropped = np.zeros((cbox_y[1] - cbox_y[0], cbox_x[1] - cbox_x[0], 3), dtype=np.uint8)
-    image_cropped[(cbox_y_clip[0] - cbox_y[0]) : (cbox_y_clip[0] - cbox_y[0] - cbox_y_clip[0] + cbox_y_clip[1]),
-                (cbox_x_clip[0] - cbox_x[0]) : (cbox_x_clip[0] - cbox_x[0] - cbox_x_clip[0] + cbox_x_clip[1]),
-                :] = image[cbox_y_clip[0]:cbox_y_clip[1],
-                           cbox_x_clip[0]:cbox_x_clip[1],
-                            :]
-
-    image_cropped = cv2.resize(image_cropped, (128, 128))
-
-    return image_cropped
-
-# visibility mask computation
-def estimate_visib_mask(d_test, d_model, delta = 0.1):
-    """
-    Estimation of visibility mask.
-
-    :param d_test: Distance image of the test scene.
-    :param d_model: Rendered distance image of the object model.
-    :param delta: Tolerance used in the visibility test.
-    :return: Visibility mask.
-    """
-    assert(d_test.shape == d_model.shape)
-    mask_valid = np.logical_and(d_test > 0, d_model > 0)
-
-    d_diff = d_model.astype(np.float32) - d_test.astype(np.float32)
-    visib_mask = np.logical_and(d_diff <= delta, mask_valid)
-
-    return visib_mask
-
-def estimate_visib_mask_gt(d_test, d_gt, delta):
-    visib_gt = estimate_visib_mask(d_test, d_gt, delta)
-    return visib_gt
-
-def estimate_visib_mask_est(d_test, d_est, visib_gt, delta):
-    visib_est = estimate_visib_mask(d_test, d_est, delta)
-    visib_est = np.logical_or(visib_est, np.logical_and(visib_gt, d_est > 0))
-    return visib_est
-
-# convert depth image to distance, might be helpful
-def depth_im_to_dist_im(depth_im, K):
-    """
-    Converts depth image to distance image.
-
-    :param depth_im: Input depth image, where depth_im[y, x] is the Z coordinate
-    of the 3D point [X, Y, Z] that projects to pixel [x, y], or 0 if there is
-    no such 3D point (this is a typical output of the Kinect-like sensors).
-    :param K: Camera matrix.
-    :return: Distance image dist_im, where dist_im[y, x] is the distance from
-    the camera center to the 3D point [X, Y, Z] that projects to pixel [x, y],
-    or 0 if there is no such 3D point.
-    """
-    xs = np.tile(np.arange(depth_im.shape[1]), [depth_im.shape[0], 1])
-    ys = np.tile(np.arange(depth_im.shape[0]), [depth_im.shape[1], 1]).T
-
-    Xs = np.multiply(xs - K[0, 2], depth_im) * (1.0 / K[0, 0])
-    Ys = np.multiply(ys - K[1, 2], depth_im) * (1.0 / K[1, 1])
-
-    dist_im = np.linalg.norm(np.dstack((Xs, Ys, depth_im)), axis=2)
-    return dist_im
 
 def mat2pdf(distance_matrix, mean, std):
     coeff = torch.ones_like(distance_matrix) * (1/(np.sqrt(2*np.pi) * std))
@@ -421,7 +315,7 @@ def mat2quat_numba(M):
     return q
 
 @jit(nopython=True)
-def add_trans_Rs_numba(translation, Rs):
+def allo2ego_Rs_numba(translation, Rs):
     for i in range(Rs.shape[0]):
         Rc1o1 = Rs[i, :, :]
         tco = translation
@@ -436,7 +330,7 @@ def add_trans_Rs_numba(translation, Rs):
         Rs[i, :, :] = Rc1o1
 
 @jit(nopython=True)
-def add_trans_dR_numba(translation):
+def allo2ego_dR_numba(translation):
     tco = translation
     p = [0, 0, 1]
     q = tco / np.linalg.norm(tco)
@@ -448,7 +342,7 @@ def add_trans_dR_numba(translation):
     return Rc
 
 @jit(nopython=True)
-def add_trans_qs_numba(translation, qs):
+def allo2ego_qs_numba(translation, qs):
     for i in range(qs.shape[0]):
         Rc1o1 = quat2mat_numba(qs[i])
         tco = translation
@@ -605,14 +499,7 @@ def transform_points_numba(uv, z, Tc1c0, To0o1, Tco, intrinsics):
 
 @jit(nopython=True)
 def estimate_visib_mask_numba(d_test, d_model, delta = 0.1):
-    """
-    Estimation of visibility mask.
 
-    :param d_test: Distance image of the test scene.
-    :param d_model: Rendered distance image of the object model.
-    :param delta: Tolerance used in the visibility test.
-    :return: Visibility mask.
-    """
     assert(d_test.shape == d_model.shape)
     mask_valid = np.logical_and(d_test > 0, d_model > 0)
 
@@ -622,14 +509,7 @@ def estimate_visib_mask_numba(d_test, d_model, delta = 0.1):
     return visib_mask
 
 def estimate_visib_mask_cuda(d_test, d_model, delta = 0.1):
-    """
-    Estimation of visibility mask.
 
-    :param d_test: Distance image of the test scene.
-    :param d_model: Rendered distance image of the object model.
-    :param delta: Tolerance used in the visibility test.
-    :return: Visibility mask.
-    """
     assert(d_test.size() == d_model.size())
     mask_valid = torch.mul(d_test > 0, d_model > 0)
 
@@ -641,7 +521,7 @@ def estimate_visib_mask_cuda(d_test, d_model, delta = 0.1):
 @jit(nopython=True)
 def compute_depth_score_numba(t_v, render_dist, pc_render_np, depth_zoom_np, tau, delta):
     # convert pc from allocentric to egocentric
-    dR = add_trans_dR_numba(t_v)
+    dR = allo2ego_dR_numba(t_v)
     pc_flatten = pc_render_np.reshape((-1, 3))
     pc_flatten[:, 2] -= render_dist
     pc_flatten = matmul_numba(dR.astype(np.float32), pc_flatten.transpose().astype(np.float32))
@@ -684,32 +564,3 @@ def compute_depth_scores_numba(t_vs, render_dist, pc_render_all, depth_zoom_all,
                                               delta)
     return scores
 
-
-def backproject_depth(depth_cv, intrinsic_matrix, return_finite_depth=True):
-
-    depth = depth_cv.astype(np.float32, copy=True)
-
-    # get intrinsic matrix
-    K = intrinsic_matrix
-    Kinv = np.linalg.inv(K)
-
-    # compute the 3D points
-    width = depth.shape[1]
-    height = depth.shape[0]
-
-    # construct the 2D points matrix
-    x, y = np.meshgrid(np.arange(width), np.arange(height))
-    ones = np.ones((height, width), dtype=np.float32)
-    x2d = np.stack((x, y, ones), axis=2).reshape(width*height, 3)
-
-    # backprojection
-    R = np.dot(Kinv, x2d.transpose())
-
-    # compute the 3D points
-    X = np.multiply(np.tile(depth.reshape(1, width*height), (3, 1)), R)
-    X = np.array(X).transpose()[:,:,0]
-    if return_finite_depth:
-        selection = np.isfinite(X[:, 0])
-        X = X[selection, :]
-
-    return X
