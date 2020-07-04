@@ -112,7 +112,7 @@ class encoder_rgbd(nn.Module):
 
         return output
 
-    def forward(self, x, roi, z, box_size):
+    def forward_pf(self, x, roi, z, box_size):
         # note here roi is represented in 256x256 image [upper_left_u, upper_left_v, lower_right_u, lower_right_v]
         out = self.layer1(x[:, :3])
         out = self.layer2(out)
@@ -138,7 +138,7 @@ class encoder_rgbd(nn.Module):
 
         return output
 
-    def forward_codebook(self, x, roi):
+    def forward(self, x, roi):
         out = self.layer1(x[:, :3])
         out = self.layer2(out)
         out = self.layer3(out)
@@ -350,6 +350,8 @@ class AAE(nn.Module):
         if self.use_GPU:
             self.encoder = self.encoder.cuda()
             self.decoder = self.decoder.cuda()
+            if self.modality == 'rgbd':
+                self.depth_decoder = self.depth_decoder.cuda()
             self.B_loss = self.B_loss.cuda()
             self.Cos_loss = self.Cos_loss.cuda()
 
@@ -427,7 +429,7 @@ class AAE(nn.Module):
             roi_info[:, 3] = 128.0 + 128.0 / 2
             roi_info[:, 4] = 128.0 + 128.0 / 2
 
-            code, code_depth = self.encoder.forward_codebook(torch.cat((images.detach(), depths.detach()), dim=1),
+            code, code_depth = self.encoder.forward(torch.cat((images.detach(), depths.detach()), dim=1),
                                                     roi_info.clone().detach())
             code = code.detach().view(images.size(0), -1)
             code_depth = code_depth.detach().view(images.size(0), -1)
@@ -442,8 +444,13 @@ class AAE(nn.Module):
             torch.save((codebook_cpt, codepose_cpt, codebook_depth_cpt), save_dir)
             print('code book is saved to {}'.format(save_dir))
 
-    # forward passing
-    # normalized depth -> reconstruction + code
+    def forward_rgbd(self, x, roi):
+        code_rgb, code_depth = self.encoder.forward(x, roi)
+        rgb_recon = self.decoder.forward(code_rgb)
+        depth_recon = self.depth_decoder.forward(code_depth)
+        out = torch.cat((rgb_recon, depth_recon), dim=1)
+        return [out, code_rgb, code_depth]
+
     def forward(self, x):
         code = self.encoder(x)
         out = self.decoder(code)

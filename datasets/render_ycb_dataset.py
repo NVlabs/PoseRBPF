@@ -428,8 +428,7 @@ class ycb_multi_render_dataset(torch.utils.data.Dataset):
         affine_roi[1, 1] = scales_v
 
         return image.permute(2, 0, 1), image_target.permute(2, 0, 1), pose_cam, \
-               mask.permute(2, 0, 1).float(), class_info.permute(2, 0, 1), class_mask, class_id, \
-               shift, scale, affine, \
+               mask.permute(2, 0, 1).float(), shift, scale, affine, \
                roi_center, roi_size, affine_roi, \
                depth_input.permute(2, 0, 1), depth_target.permute(2, 0, 1)
 

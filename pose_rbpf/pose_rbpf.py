@@ -539,7 +539,7 @@ class PoseRBPF:
             roi_info[:, 4] = 128.0 + 128.0 / 2
 
             # compute the codes
-            codes, codes_depth = self.target_obj_encoder.forward(images_roi_cuda.detach(),
+            codes, codes_depth = self.target_obj_encoder.forward_pf(images_roi_cuda.detach(),
                                                                             roi_info.clone(),
                                                                             z_tensor,
                                                                             self.target_box_sz)
@@ -569,7 +569,7 @@ class PoseRBPF:
             roi_info[:, 4] = roi_centers[:, 1] + roi_sizes / 2
 
             # computer the codes
-            codes, codes_depth = self.target_obj_encoder.forward(images_roi_cuda.detach(),
+            codes, codes_depth = self.target_obj_encoder.forward_pf(images_roi_cuda.detach(),
                                                                                 roi_info.clone(),
                                                                                 z_tensor,
                                                                                 self.target_box_sz)
