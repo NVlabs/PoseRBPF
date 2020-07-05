@@ -16,7 +16,7 @@ from datasets.render_ycb_dataset import *
 from ycb_render.tless_renderer_tensor import *
 import imgaug.augmenters as iaa
 
-class TLess_Multi_Render_Dataset(torch.utils.data.Dataset):
+class tless_multi_render_dataset(torch.utils.data.Dataset):
     def __init__(self, model_dir, model_names, render_size=128, output_size=(128, 128),
                  target_size=128,
                  chrom_rand_level=cfg.TRAIN.CHM_RAND_LEVEL):
@@ -154,12 +154,11 @@ class TLess_Multi_Render_Dataset(torch.utils.data.Dataset):
         affine_roi[1, 1] = scales_v
 
         return image.permute(2, 0, 1), image_target.permute(2, 0, 1), pose_cam, \
-               mask.permute(2, 0, 1).float(), class_info.permute(2, 0, 1), class_mask, class_id, \
+               mask.permute(2, 0, 1).float(), \
                shift, scale, affine, \
                roi_center, roi_size, affine_roi, \
                depth_input.permute(2, 0, 1), depth_target.permute(2, 0, 1)
 
-    # @profile
     def load(self, index):
         instance = random.sample(set(list(range(0, len(self.main_models)))), 1)
         self.renderer.instances = instance

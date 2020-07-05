@@ -432,7 +432,6 @@ class ycb_multi_render_dataset(torch.utils.data.Dataset):
                roi_center, roi_size, affine_roi, \
                depth_input.permute(2, 0, 1), depth_target.permute(2, 0, 1)
 
-    # @profile
     def load(self, index):
         # render instances
         instance = random.sample(set(list(range(0, len(self.main_models)))), 1)

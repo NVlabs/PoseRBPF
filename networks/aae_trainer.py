@@ -28,7 +28,7 @@ import gc
 
 class aae_trainer(nn.Module):
     def __init__(self, cfg_path, object_names, modality, config_new=None,
-                 aae_capacity=1, aae_code_dim=128, ckpt_path=None, category='ycb'):
+                 aae_capacity=1, aae_code_dim=128, ckpt_path=None, obj_ctg='ycb'):
         super(aae_trainer, self).__init__()
 
         self.cfg_path = cfg_path
@@ -38,7 +38,7 @@ class aae_trainer(nn.Module):
         else:
             self.cfg_all = cfg
 
-        self.category = category
+        self.obj_ctg = obj_ctg
         self.modality = modality
 
         if not os.path.exists('./checkpoints'):
@@ -111,10 +111,10 @@ class aae_trainer(nn.Module):
 
         # Directory for training logs
         self.log_dir = os.path.join(self.ckpt_dir, "{}{:%Y%m%dT%H%M%S}_{}_{}".format(
-            self.category, now, self.object_names[0], self.cfg_all.EXP_NAME))
+            self.obj_ctg, now, self.object_names[0], self.cfg_all.EXP_NAME))
         # Path to save after each epoch. Include placeholders that get filled by Keras.
         self.checkpoint_path = os.path.join(self.log_dir, "ckpt_{}_*epoch*.pth".format(
-            self.category))
+            self.obj_ctg))
         self.checkpoint_path = self.checkpoint_path.replace(
             "*epoch*", "{:04d}")
 

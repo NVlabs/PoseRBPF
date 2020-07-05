@@ -1,15 +1,22 @@
 EXP_DIR: tless_dataset
 CODE_DIM: 128
 CAPACITY: 1
+GPU_ID: 0
+EXP_NAME: "default"
 TRAIN:
-  OBJECTS: !!python/tuple ['obj_05']
-  BOOTSTRAP_CONST: 200
+  NORMALIZE_DEPTH: False
+  DEPTH_FUSION: False
+  RoI_ACC: True
+  DEPTH_EMBEDDING: True
+  TRAIN_AAE: True
+  OBJECTS: !!python/tuple ['obj_28']
+  BOOTSTRAP_CONST: 1000
   USE_TRIPLET_LOSS: False
   WORKERS: 0
   TRANS_SEP: False
   DEEPER_TRANSNET: True
   ONLINE_RENDERING: True
-  RENDER_DIST: !!python/tuple [1.0]
+  RENDER_DIST: !!python/tuple [1.2]
   LIGHT_INT_MIN: 0.3
   LIGHT_INT_MAX: 3.0
   LIGHT_COLOR_VAR: 0.5
@@ -21,10 +28,16 @@ TRAIN:
   SHIFT_MAX: 5.0
   SCALE_MIN: 0.975
   SCALE_MAX: 1.025
-  OC_PROB: 0.4
+  OC_PROB: 0.25
   N_OCCLUDERS: 2
-  TRUNC_PROB: 0.1
+  TRUNC_PROB: 0.25
   TRUNC_X_MAX: 1.0
   TRUNC_Y_MAX: 1.0
-  OC_XY_RANGE: !!python/tuple [-0.05, 0.05]
-  OC_Z_RANGE: !!python/tuple [0.10, 1.00]
+  OC_XY_RANGE: !!python/tuple [-0.2, 0.2]
+  OC_Z_RANGE: !!python/tuple [0, 0.2]
+  FU: 1076.74064739
+  FV: 1075.17825536
+  U0: 312.987
+  V0: 241.311
+  RENDER_SZ: 128
+  INPUT_IM_SIZE: [256, 256]

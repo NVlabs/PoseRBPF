@@ -33,8 +33,8 @@ def parse_args():
     parser.add_argument('--save', dest='save_frequency',
                         help='checkpoint saving frequency',
                         default=50, type=int)
-    parser.add_argument('--obj_type', dest='obj_type',
-                        help='dataset to train on',
+    parser.add_argument('--obj_ctg', dest='obj_ctg',
+                        help='object category: ycb or tless',
                         default='ycb', type=str)
     parser.add_argument('--dis_dir', dest='dis_dir',
                         help='relative dir of the distration set',
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     args = parse_args()
     print(args)
 
-    cfg_file = '{}train_{}.yml'.format(args.cfg_dir, args.obj)
+    cfg_file = '{}{}.yml'.format(args.cfg_dir, args.obj)
     cfg_from_file(cfg_file)
 
     print('Using config:')
@@ -64,14 +64,14 @@ if __name__ == '__main__':
     print(cfg.TRAIN.RENDER_SZ)
     print(cfg.TRAIN.INPUT_IM_SIZE)
 
-    if args.obj_type == 'ycb':
+    if args.obj_ctg == 'ycb':
         model_path = './cad_models'
         dataset_train = ycb_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS,
                                                  render_size=cfg.TRAIN.RENDER_SZ,
                                                  output_size=cfg.TRAIN.INPUT_IM_SIZE)
-    elif args.obj_type == 'tless':
+    elif args.obj_ctg == 'tless':
         model_path = './cad_models'
-        dataset_train = TLess_Multi_Render_Dataset(model_path, cfg.TRAIN.OBJECTS,
+        dataset_train = tless_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS,
                                                  render_size=cfg.TRAIN.RENDER_SZ,
                                                  output_size=cfg.TRAIN.INPUT_IM_SIZE)
 
@@ -85,7 +85,7 @@ if __name__ == '__main__':
                           aae_capacity=cfg.CAPACITY,
                           aae_code_dim=cfg.CODE_DIM,
                           ckpt_path=args.pretrained,
-                          category=args.obj_type)
+                          obj_ctg=args.obj_ctg)
 
 
     if torch.cuda.device_count() > 1:

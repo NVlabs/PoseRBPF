@@ -2,7 +2,7 @@ EXP_DIR: tless_dataset
 CODE_DIM: 128
 CAPACITY: 1
 GPU_ID: 0
-EXP_NAME: "raw_depth"
+EXP_NAME: "default"
 TRAIN:
   NORMALIZE_DEPTH: False
   RoI_ACC: True

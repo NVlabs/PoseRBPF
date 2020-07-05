@@ -25,11 +25,11 @@ from functools import partial
 import pickle
 
 class PoseRBPF:
-    def __init__(self, obj_list, cfg_list, ckpt_list, codebook_list, object_category, modality, cad_model_dir, visualize=True):
+    def __init__(self, obj_list, cfg_list, ckpt_list, codebook_list, obj_ctg, modality, cad_model_dir, visualize=True):
 
         self.visualize = visualize
         self.obj_list = obj_list
-        self.obj_ctg = object_category
+        self.obj_ctg = obj_ctg
 
         # ycb class names
         with open('./datasets/ycb_video_classes.txt', 'r') as class_name_file:
