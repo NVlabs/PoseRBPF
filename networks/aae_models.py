@@ -329,13 +329,13 @@ class AAE(nn.Module):
                                         list(self.depth_decoder.parameters()),
                                         lr=0.0002)
         else:
-            self.encoder = encoder_rgb(capacity=capacity, code_dim=code_dim)
+            self.encoder = encoder_rgb(object_total_n=1, capacity=capacity, code_dim=code_dim)
             self.decoder = decoder_rgb(capacity=capacity, code_dim=code_dim)
             self.encoder.apply(weights_init)
             self.decoder.apply(weights_init)
 
             self.optimizer = optim.Adam(list(self.encoder.parameters()) + \
-                                        list(self.decoder_rgb.parameters()),
+                                        list(self.decoder.parameters()),
                                         lr=0.0002)
 
         self.model_path = model_path

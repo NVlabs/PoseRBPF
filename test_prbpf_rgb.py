@@ -13,7 +13,7 @@ def parse_args():
     """
     Parse input arguments
     """
-    parser = argparse.ArgumentParser(description='Test PoseRBPF on YCB Video or T-LESS Datasets (RGBD)')
+    parser = argparse.ArgumentParser(description='Test PoseRBPF on YCB Video or T-LESS Datasets (RGB)')
     parser.add_argument('--test_config', dest='test_cfg_file',
                         help='configuration for testing',
                         required=True, type=str)
@@ -22,13 +22,13 @@ def parse_args():
                         default='./config/test/YCB/', type=str)
     parser.add_argument('--train_config_dir', dest='train_cfg_dir',
                         help='directory for AAE training configuration files',
-                        default='./checkpoints/ycb_configs_roi_rgbd/', type=str)
+                        default='./checkpoints/ycb_configs_rgb/', type=str)
     parser.add_argument('--ckpt_dir', dest='ckpt_dir',
                         help='directory for AAE ckpts',
-                        default='./checkpoints/ycb_ckpts_roi_rgbd/', type=str)
+                        default='./checkpoints/ycb_ckpts_rgb/', type=str)
     parser.add_argument('--codebook_dir', dest='codebook_dir',
                         help='directory for codebooks',
-                        default='./checkpoints/ycb_codebooks_roi_rgbd/', type=str)
+                        default='./checkpoints/ycb_codebooks_rgb/', type=str)
     parser.add_argument('--gpu', dest='gpu_id',
                         help='GPU device id to use [0]',
                         default=0, type=int)
@@ -92,13 +92,13 @@ if __name__ == '__main__':
     checkpoint_list = []
     codebook_list = []
     for obj in obj_list:
-        checkpoint_list.append(args.ckpt_dir+'{}_py3.pth'.format(obj))
+        checkpoint_list.append(args.ckpt_dir+'{}.pth'.format(obj))
         if not os.path.exists(args.codebook_dir):
             os.makedirs(args.codebook_dir)
         codebook_list.append(args.codebook_dir+'{}.pth'.format(obj))
 
     # setup the poserbpf
-    pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, object_category, modality='rgbd', cad_model_dir=args.cad_dir)
+    pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, object_category, modality='rgb', cad_model_dir=args.cad_dir)
 
     target_obj = cfg.TEST.OBJECTS[0]
     target_cfg = pose_rbpf.set_target_obj(target_obj)

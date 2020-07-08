@@ -45,6 +45,8 @@ class PoseRBPF:
         self.rbpf_list = []
         self.rbpf_ok_list = []
 
+        self.modality = modality
+
         for ckpt_file, codebook_file, obj in zip(ckpt_list, codebook_list, obj_list):
             print(ckpt_file)
             print(codebook_file)
@@ -63,7 +65,7 @@ class PoseRBPF:
             if os.path.exists(codebook_file):
                 print('Found codebook in : ' + codebook_file)
                 self.codebook_list.append(torch.load(codebook_file)[0])
-                if self.cfg_list[0].TRAIN.DEPTH_EMBEDDING:
+                if modality == 'rgbd':
                     self.codebook_list_depth.append(torch.load(codebook_file)[2])
             else:
                 print('Cannot find codebook in : ' + codebook_file)
@@ -218,7 +220,9 @@ class PoseRBPF:
         self.target_obj_codebook = self.codebook_list[self.target_obj_idx]
         self.target_obj_cfg = self.cfg_list[self.target_obj_idx]
 
-        self.target_obj_codebook_depth = self.codebook_list_depth[self.target_obj_idx]
+        if self.modality == 'rgbd':
+            self.target_obj_codebook_depth = self.codebook_list_depth[self.target_obj_idx]
+
         self.target_box_sz = 2 * self.target_obj_cfg.TRAIN.U0 / self.target_obj_cfg.TRAIN.FU * \
                              self.target_obj_cfg.TRAIN.RENDER_DIST[0]
 
@@ -477,7 +481,7 @@ class PoseRBPF:
 
         self.uv_init = uv_h.copy()
 
-        if depth is not None:
+        if self.modality=='rgbd':
             uv_h_int = uv_h.astype(int)
             uv_h_int[:, 0] = np.clip(uv_h_int[:, 0], 0, image.shape[1] - 1)
             uv_h_int[:, 1] = np.clip(uv_h_int[:, 1], 0, image.shape[0] - 1)
@@ -495,9 +499,13 @@ class PoseRBPF:
 
         self.z_init = z.copy()
         # evaluate translation
-        distribution = self.evaluate_particles(image, uv_h, z,
-                                               self.target_obj_cfg.TRAIN.RENDER_DIST[0], 0.1, depth=depth,
-                                               initialzation=True)
+        if self.modality == 'rgbd':
+            distribution = self.evaluate_particles_rgbd(image, uv_h, z,
+                                                       self.target_obj_cfg.TRAIN.RENDER_DIST[0], 0.1, depth=depth,
+                                                       initialzation=True)
+        else:
+            distribution = self.evaluate_particles_rgb(image, uv_h, z,
+                                                        self.target_obj_cfg.TRAIN.RENDER_DIST[0], 0.1)
 
         # find the max pdf from the distribution matrix
         index_star = my_arg_max(distribution)
@@ -513,8 +521,8 @@ class PoseRBPF:
         self.rbpf.z_bar = z_star
         self.rbpf_init_max_sim = self.log_max_sim[-1]
 
-    # evaluate particles according to the RGB(D) images
-    def evaluate_particles(self, image,
+    # evaluate particles according to the RGBD images
+    def evaluate_particles_rgbd(self, image,
                            uv, z,
                            render_dist, gaussian_std,
                            depth, mask=None,
@@ -592,32 +600,31 @@ class PoseRBPF:
 
         # evaluate particles with depth images
         depth_scores = torch.from_numpy(np.ones_like(z)).cuda().float()
-        if depth is not None:
-            if initialzation:
-                depth_scores = self.renderer.evaluate_depths_init(cls_id=self.target_obj_idx,
-                                                                  depth=depth, uv=uv, z=z,
-                                                                  q_idx=i_sims.cpu().numpy(),
-                                                                  intrinsics=self.intrinsics,
-                                                                  render_dist=render_dist, codepose=self.rbpf_codepose,
-                                                                  delta=self.target_obj_cfg.PF.DEPTH_DELTA,
-                                                                  tau=self.target_obj_cfg.PF.DEPTH_TAU,
-                                                                  mask=mask)
-                depth_scores = torch.from_numpy(depth_scores).float().cuda()
-            else:
-                depth_scores, vis_ratio = self.renderer.evaluate_depths_tracking(rbpf=self.rbpf,
-                                                                                 cls_id=self.target_obj_idx,
-                                                                                 depth=depth, uv=uv, z=z,
-                                                                                 q_idx=i_sims.cpu().numpy(),
-                                                                                 intrinsics=self.intrinsics,
-                                                                                 render_dist=render_dist,
-                                                                                 codepose=self.rbpf_codepose,
-                                                                                 delta=self.target_obj_cfg.PF.DEPTH_DELTA,
-                                                                                 tau=self.target_obj_cfg.PF.DEPTH_TAU,
-                                                                                 rbpf_ready=self.rbpf_ok,
-                                                                                 mask=mask
-                                                                                 )
-                max_vis_ratio = torch.max(vis_ratio).cpu().numpy()
-                self.max_vis_ratio = max_vis_ratio
+        if initialzation:
+            depth_scores = self.renderer.evaluate_depths_init(cls_id=self.target_obj_idx,
+                                                              depth=depth, uv=uv, z=z,
+                                                              q_idx=i_sims.cpu().numpy(),
+                                                              intrinsics=self.intrinsics,
+                                                              render_dist=render_dist, codepose=self.rbpf_codepose,
+                                                              delta=self.target_obj_cfg.PF.DEPTH_DELTA,
+                                                              tau=self.target_obj_cfg.PF.DEPTH_TAU,
+                                                              mask=mask)
+            depth_scores = torch.from_numpy(depth_scores).float().cuda()
+        else:
+            depth_scores, vis_ratio = self.renderer.evaluate_depths_tracking(rbpf=self.rbpf,
+                                                                             cls_id=self.target_obj_idx,
+                                                                             depth=depth, uv=uv, z=z,
+                                                                             q_idx=i_sims.cpu().numpy(),
+                                                                             intrinsics=self.intrinsics,
+                                                                             render_dist=render_dist,
+                                                                             codepose=self.rbpf_codepose,
+                                                                             delta=self.target_obj_cfg.PF.DEPTH_DELTA,
+                                                                             tau=self.target_obj_cfg.PF.DEPTH_TAU,
+                                                                             rbpf_ready=self.rbpf_ok,
+                                                                             mask=mask
+                                                                             )
+            max_vis_ratio = torch.max(vis_ratio).cpu().numpy()
+            self.max_vis_ratio = max_vis_ratio
 
             # reshape the depth score
             if torch.max(depth_scores) > 0:
@@ -632,6 +639,42 @@ class PoseRBPF:
 
         # combine RGB and D
         pdf_matrix = torch.mul(pdf_matrix, depth_scores)
+
+        # determine system failure
+        if max_sim_all < 0.6:
+            self.rbpf_ok = False
+
+        self.log_max_sim.append(max_sim_all)
+
+        return pdf_matrix
+
+    def evaluate_particles_rgb(self, image, uv, z,
+                                render_dist, gaussian_std):
+
+        images_roi_cuda, scale_roi = get_rois_cuda(image.detach(), uv, z,
+                                                   self.target_obj_cfg.PF.FU,
+                                                   self.target_obj_cfg.PF.FV,
+                                                   render_dist, out_size=128)
+
+        # forward passing
+        n_particles = z.shape[0]
+        class_info = torch.ones((1, 1, 128, 128), dtype=torch.float32)
+        class_info_cuda = class_info.cuda().repeat(n_particles, 1, 1, 1)
+        images_input_cuda = torch.cat((images_roi_cuda.detach(), class_info_cuda.detach()), dim=1)
+        codes = self.target_obj_encoder.forward(images_input_cuda).view(images_input_cuda.size(0), -1).detach()
+
+        # compute the similarity between particles' codes and the codebook
+        cosine_distance_matrix_rgb = self.aae_full.compute_distance_matrix(codes, self.target_obj_codebook)
+        max_rgb = torch.max(cosine_distance_matrix_rgb)
+        self.max_sim_rgb = max_rgb.cpu().numpy()
+        cosine_distance_matrix = cosine_distance_matrix_rgb
+
+        # get the maximum similarity for each particle
+        v_sims, i_sims = torch.max(cosine_distance_matrix, dim=1)
+        self.cos_dist_mat = v_sims
+
+        max_sim_all = torch.max(v_sims)
+        pdf_matrix = mat2pdf(cosine_distance_matrix / max_sim_all, 1, gaussian_std)
 
         # determine system failure
         if max_sim_all < 0.6:
@@ -658,11 +701,16 @@ class PoseRBPF:
             self.rbpf.add_noise_rot()
 
         # compute pdf matrix for each particle
-        est_pdf_matrix = self.evaluate_particles(image, self.rbpf.uv, self.rbpf.z,
-                                               self.target_obj_cfg.TRAIN.RENDER_DIST[0],
-                                               self.target_obj_cfg.PF.WT_RESHAPE_VAR,
-                                               depth=depth,
-                                               mask=mask, initialzation=False)
+        if self.modality == 'rgbd':
+            est_pdf_matrix = self.evaluate_particles_rgbd(image, self.rbpf.uv, self.rbpf.z,
+                                                       self.target_obj_cfg.TRAIN.RENDER_DIST[0],
+                                                       self.target_obj_cfg.PF.WT_RESHAPE_VAR,
+                                                       depth=depth,
+                                                       mask=mask, initialzation=False)
+        else:
+            est_pdf_matrix = self.evaluate_particles_rgb(image, self.rbpf.uv, self.rbpf.z,
+                                                          self.target_obj_cfg.TRAIN.RENDER_DIST[0],
+                                                          self.target_obj_cfg.PF.WT_RESHAPE_VAR)
 
 
         # most likely particle
