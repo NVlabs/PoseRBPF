@@ -844,13 +844,13 @@ class PoseRBPF:
                 self.T_c1c0 = np.matmul(self.T_c1o, np.linalg.inv(self.T_c0o))
             self.T_c0o = self.T_c1o.copy()
 
+            if self.modality == 'rgbd':
+                depth_data = depths[0]
+            else:
+                depth_data = None
+
             # initialization
             if step == 0 or self.rbpf_ok is False:
-
-                if self.target_obj_cfg.PF.USE_DEPTH:
-                    depth_data = depths[0]
-                else:
-                    depth_data = None
 
                 print('[Initialization] Initialize PoseRBPF with detected center ... ')
                 if np.linalg.norm(self.prior_uv[:2] - self.gt_uv[:2]) > 40:
@@ -876,7 +876,7 @@ class PoseRBPF:
             if self.rbpf_ok:
                 torch.cuda.synchronize()
                 time_start = time.time()
-                self.process_poserbpf(images[0], intrinsics, depth=depths[0])
+                self.process_poserbpf(images[0], intrinsics, depth=depth_data)
                 torch.cuda.synchronize()
                 time_elapse = time.time() - time_start
                 print('[Filtering] fps = ', 1 / time_elapse)

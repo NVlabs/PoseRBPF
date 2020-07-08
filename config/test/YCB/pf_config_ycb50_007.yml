@@ -1,4 +1,4 @@
-GPU_ID: 1
+GPU_ID: 0
 PF:
   USE_DEPTH: True
   RENDER_FULL: True
