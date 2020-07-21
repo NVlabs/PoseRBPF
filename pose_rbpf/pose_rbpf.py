@@ -414,7 +414,7 @@ class PoseRBPF:
 
         return filter_rot_error_bar * 57.3
 
-    def save_log(self, sequence, filename, with_gt=True):
+    def save_log(self, sequence, filename, with_gt=True, tless=False):
         if not self.log_created:
             self.log_pose = open(self.log_dir + "/Pose_{}_seq{}.txt".format(self.target_obj_cfg.PF.TRACK_OBJ, sequence), "w+")
             if with_gt:
@@ -450,6 +450,31 @@ class PoseRBPF:
                                                                 filename[0],
                                                                 self.log_err_t[-1] * 100,
                                                                 self.log_err_r[-1] * 57.3))
+
+        # for tless dataset, save the results as sixd challenge format
+        if tless:
+            obj_id_sixd = self.target_obj_cfg.PF.TRACK_OBJ[-2:]
+            seq_id_sixd = filename[0][:2]
+            img_id_sixd = filename[0][-4:]
+            save_folder_sixd = self.target_obj_cfg.PF.SAVE_DIR[
+                               :-7] + 'dpf_tless_primesense_all/'  # .format(obj_id_sixd)
+            save_folder_sixd += seq_id_sixd + '/'
+            if not os.path.exists(save_folder_sixd):
+                os.makedirs(save_folder_sixd)
+            filename_sixd = img_id_sixd + '_' + obj_id_sixd + '.yml'
+            pose_log_sixd = open(save_folder_sixd + filename_sixd, "w+")
+            pose_log_sixd.write('run_time: -1 \n')
+            pose_log_sixd.write('ests: \n')
+            str_score = '- {score: 1.00000000, '
+            str_R = 'R: [{:.8f}, {:.8f}, {:.8f}, {:.8f}, {:.8f}, {:.8f}, {:.8f}, {:.8f}, {:.8f}], ' \
+                .format(self.rbpf.rot_bar[0, 0], self.rbpf.rot_bar[0, 1], self.rbpf.rot_bar[0, 2],
+                        self.rbpf.rot_bar[1, 0], self.rbpf.rot_bar[1, 1], self.rbpf.rot_bar[1, 2],
+                        self.rbpf.rot_bar[2, 0], self.rbpf.rot_bar[2, 1], self.rbpf.rot_bar[2, 2])
+            str_t = 't: [{:.8f}, {:.8f}, {:.8f}]'.format(self.rbpf.trans_bar[0] * 1000.0,
+                                                         self.rbpf.trans_bar[1] * 1000.0,
+                                                         self.rbpf.trans_bar[2] * 1000.0)
+            pose_log_sixd.write(str_score + str_R + str_t + '}')
+            pose_log_sixd.close()
 
     def display_overall_result(self):
         print('filter trans closest error = ', np.mean(np.asarray(self.log_err_t_star)))
@@ -592,7 +617,11 @@ class PoseRBPF:
         max_depth = torch.max(cosine_distance_matrix_depth)
         self.max_sim_rgb = max_rgb.cpu().numpy()
         self.max_sim_depth = max_depth.cpu().numpy()
-        cosine_distance_matrix = cosine_distance_matrix_rgb * 0.5 + cosine_distance_matrix_depth * 0.5
+
+        if initialzation:
+            cosine_distance_matrix = cosine_distance_matrix_rgb * 0.5 + cosine_distance_matrix_depth * 0.5
+        else:
+            cosine_distance_matrix = cosine_distance_matrix_rgb * 0.4 + cosine_distance_matrix_depth * 0.6
 
         # get the maximum similarity for each particle
         v_sims, i_sims = torch.max(cosine_distance_matrix, dim=1)
@@ -820,6 +849,8 @@ class PoseRBPF:
                 gt_center = gt_center / gt_center[2]
                 self.gt_uv[:2] = gt_center[:2]
                 self.gt_z = self.gt_t[2]
+
+                is_kf = (step % 20 == 0)
             else:
                 print('*** INCORRECT DATASET SETTING! ***')
                 break
@@ -868,10 +899,6 @@ class PoseRBPF:
 
                 self.rbpf_ok = True
 
-                # to avoid initialization to symmetric view and cause abnormal ADD results
-                if self.obj_ctg == 'ycb' and init_rot_error * 57.3 > 100:
-                    self.rbpf_ok = False
-
             # filtering
             if self.rbpf_ok:
                 torch.cuda.synchronize()
@@ -884,7 +911,7 @@ class PoseRBPF:
                 # logging
                 if self.data_with_gt:
                     self.display_result(step, steps)
-                    self.save_log(sequence, file_name)
+                    self.save_log(sequence, file_name, tless=(self.obj_ctg == 'tless'))
 
                     # visualization
                     if is_kf:
@@ -900,6 +927,10 @@ class PoseRBPF:
                         image_disp = 0.4 * image_disp + 0.6 * image_est_disp
                         self.visualize_roi(image_disp, self.rbpf.uv, self.rbpf.z, step, error=False, uncertainty=self.show_prior)
                         plt.close()
+
+                # to avoid initialization to symmetric view and cause abnormal ADD results
+                if self.obj_ctg == 'ycb' and init_rot_error * 57.3 > 50:
+                    self.rbpf_ok = False
 
             if step == steps-1:
                 break
