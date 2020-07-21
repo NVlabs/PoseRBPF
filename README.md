@@ -35,7 +35,7 @@ sh build.sh
 - The demo shows tracking ```003_cracker_box``` on YCB Video Dataset.
 - Run script ```download_demo.sh``` to download checkpoint (434 MB), CAD models (743 MB), 2D detections (13 MB), and necessary data (3 GB) for the demo:
 ```angular2html
-sh download_demo.sh
+sh scripts/download_demo.sh
 ```
 - Then you should have files organized like:
 ```angular2html
