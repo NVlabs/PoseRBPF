@@ -618,10 +618,7 @@ class PoseRBPF:
         self.max_sim_rgb = max_rgb.cpu().numpy()
         self.max_sim_depth = max_depth.cpu().numpy()
 
-        if initialzation:
-            cosine_distance_matrix = cosine_distance_matrix_rgb * 0.5 + cosine_distance_matrix_depth * 0.5
-        else:
-            cosine_distance_matrix = cosine_distance_matrix_rgb * 0.4 + cosine_distance_matrix_depth * 0.6
+        cosine_distance_matrix = cosine_distance_matrix_rgb * 0.5 + cosine_distance_matrix_depth * 0.5
 
         # get the maximum similarity for each particle
         v_sims, i_sims = torch.max(cosine_distance_matrix, dim=1)
