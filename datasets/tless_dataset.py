@@ -1,11 +1,11 @@
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
+
 from datasets.ycb_video_dataset import *
-
 import ruamel.yaml as yaml
-
 from pathlib import Path
-
 import png
-
 import matplotlib.pyplot as plt
 
 def load_info(path):
