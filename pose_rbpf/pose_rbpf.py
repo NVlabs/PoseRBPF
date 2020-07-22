@@ -765,8 +765,7 @@ class PoseRBPF:
 
         return 0
 
-    def run_dataset(self, val_dataset, sequence, only_track_kf=False, kf_skip=1):
-
+    def run_dataset(self, val_dataset, sequence, only_track_kf=False, kf_skip=1, demo=False):
         self.log_err_r = []
         self.log_err_r_star = []
         self.log_err_t = []
@@ -907,7 +906,17 @@ class PoseRBPF:
                     self.save_log(sequence, file_name, tless=(self.obj_ctg == 'tless'))
 
                     # visualization
-                    if is_kf:
+                    if demo:
+                        image_disp = images[0].float().numpy()
+                        image_est_render, _ = self.renderer.render_pose(self.intrinsics,
+                                                                        self.rbpf.trans_bar,
+                                                                        self.rbpf.rot_bar,
+                                                                        self.target_obj_idx)
+                        image_est_disp = image_est_render[0].permute(1, 2, 0).cpu().numpy()
+                        image_disp = 0.4 * image_disp + 0.6 * image_est_disp
+                        cv2.imshow('show tracking', cv2.cvtColor(image_disp, cv2.COLOR_RGB2BGR))
+                        cv2.waitKey(10)
+                    elif is_kf:
                         image_disp = images[0].float().numpy()
 
                         image_est_render, _ = self.renderer.render_pose(self.intrinsics,

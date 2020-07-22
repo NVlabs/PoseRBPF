@@ -68,7 +68,7 @@ sh scripts/download_demo.sh
 
 - Run demo with ```003_cracker_box```. The results will be stored in ```./results/```
 ```angular2html
-sh scripts/test_ycb_rgbd/val_ycb_003_rgbd.sh 0 1;
+./scripts/run_demo.sh;
 ```
 
 ## Testing on the YCB Video Dataset

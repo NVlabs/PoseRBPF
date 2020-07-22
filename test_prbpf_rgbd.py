@@ -51,6 +51,10 @@ def parse_args():
                         help='index of sequence',
                         default=1,
                         type=int)
+    parser.add_argument('--demo', dest='demo',
+                        help='run as demo mode',
+                        default=False,
+                        type=bool)
     args = parser.parse_args()
     return args
 
@@ -115,7 +119,7 @@ if __name__ == '__main__':
                                          class_model_num=1,
                                          path=args.dataset_dir,
                                          list_file=test_list_file)
-        pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1)
+        pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1, demo=args.demo)
     elif args.dataset_name == 'tless':
         test_list_file = './datasets/TLess/{}/{}.txt'.format(target_obj, args.n_seq)
         dataset_test = tless_dataset(class_ids=[0],
@@ -123,5 +127,5 @@ if __name__ == '__main__':
                                      class_model_num=1,
                                      path=args.dataset_dir,
                                      list_file=test_list_file)
-        pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1)
+        pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1, demo=args.demo)
 
