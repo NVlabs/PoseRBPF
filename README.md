@@ -68,7 +68,7 @@ sh build.sh
 
 - Run demo with ```003_cracker_box```. The results will be stored in ```./results/```
 ```angular2html
-./scripts/run_demo.sh;
+./scripts/run_demo.sh
 ```
 
 ## Testing on the YCB Video Dataset
@@ -76,11 +76,11 @@ sh build.sh
 - Download all the data in the [YCB Video Dataset](https://rse-lab.cs.washington.edu/projects/posecnn/) so the ```../YCB_Video_Dataset/data``` folder contains all the sequences.
 - Run RGB-D tracking (use ```002_master_chef_can``` as an example here):
 ```angular2html
-sh scripts/test_ycb_rgbd/val_ycb_002_rgbd.sh 0 1;
+sh scripts/test_ycb_rgbd/val_ycb_002_rgbd.sh 0 1
 ```
 - Run RGB tracking (use ```002_master_chef_can``` as an example here):
 ```angular2html
-sh scripts/test_ycb_rgb/val_ycb_002_rgb.sh 0 1;
+sh scripts/test_ycb_rgb/val_ycb_002_rgb.sh 0 1
 ```
 
 ## Testing on the TLess Dataset
