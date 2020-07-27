@@ -11,8 +11,8 @@ import copy
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
 import pprint
 from transforms3d.axangles import *
-from pose_rbpf.particle_filter import *
-from pose_rbpf.render_wrapper import *
+from .particle_filter import *
+from .render_wrapper import *
 from datasets.render_ycb_dataset import *
 from datasets.render_tless_dataset import *
 import matplotlib.patches as patches

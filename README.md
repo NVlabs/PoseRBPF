@@ -85,4 +85,35 @@ sh scripts/test_ycb_rgb/val_ycb_002_rgb.sh 0 1;
 
 ## Testing on the TLess Dataset
 
+## Online Pose Estimation using ROS
+Due to the incompatibility between ROS Kinetic and Python 3, the ROS node only runs with Python 2.7. We first create the virtual env with ```pose_rbpf_env_py2.yml```:
+```angular2html
+conda env create -f pose_rbpf_env_py2.yml
+conda activate pose_rbpf_env_py2
+```
+Install ROS if it's not there:
+```angular2html
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+sudo apt-get update
+sudo apt-get install ros-kinetic-desktop-full
+```
+Update python packages:
+```angular2html
+conda install -c auto catkin_pkg
+pip install -U rosdep rosinstall_generator wstool rosinstall six vcstools
+pip install msgpack
+pip install empy
+```
+Source ROS (every time before launching the node):
+```angular2html
+source /opt/ros/kinetic/setup.bash
+```
+Initialze rosdep:
+```angular2html
+sudo rosdep init
+rosdep update
+```
+
+
 ## Training
