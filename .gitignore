@@ -145,3 +145,5 @@ data/
 cad_models/
 
 detections/
+
+ros_data/
