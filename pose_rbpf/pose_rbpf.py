@@ -19,9 +19,10 @@ import matplotlib.patches as patches
 import os
 from functools import partial
 import pickle
+from .sdf_optimizer import *
 
 class PoseRBPF:
-    def __init__(self, obj_list, cfg_list, ckpt_list, codebook_list, obj_ctg, modality, cad_model_dir, visualize=True):
+    def __init__(self, obj_list, cfg_list, ckpt_list, codebook_list, obj_ctg, modality, cad_model_dir, visualize=True, refine=False):
 
         self.visualize = visualize
         self.obj_list = obj_list
@@ -206,6 +207,40 @@ class PoseRBPF:
         self.image_recon = None
         self.skip = False
 
+        # SDF refine
+        self.refine = refine
+        self.sdf_list = []
+        self.sdf_limits_list = []
+        self.points_list = []
+        self.sdf_refiner = None
+        self.target_sdf = None
+        self.target_sdf_limits = None
+        self.target_points = None
+        if self.refine:
+            # load the objects
+            if self.obj_ctg == 'ycb':
+                for object in self.obj_list:
+                    sdf_file = '{}/ycb_models/{}/textured_simple_low_res.pth'.format(cad_model_dir, object)
+                    sdf_torch, sdf_limits = load_sdf(sdf_file)
+                    self.sdf_list.append(sdf_torch)
+                    self.sdf_limits_list.append(sdf_limits)
+                    points_file = '{}/ycb_models/{}/points.xyz'.format(cad_model_dir, object)
+                    points = np.loadtxt(points_file).astype(np.float32)
+                    points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
+                    self.points_list.append(points)
+            else:
+                for object in self.obj_list:
+                    sdf_file = '{}/tless_models/{}.pth'.format(cad_model_dir, object)
+                    sdf_torch, sdf_limits = load_sdf(sdf_file)
+                    self.sdf_list.append(sdf_torch)
+                    self.sdf_limits_list.append(sdf_limits)
+                    points_file = '{}/tless_models/{}.pth'.format(cad_model_dir, object)
+                    points = np.loadtxt(points_file).astype(np.float32) / 1000
+                    points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
+                    self.points_list.append(points)
+            # define the optimizer
+            self.sdf_refiner = sdf_optimizer(lr=0.005, use_gpu=True)
+
     # specify the target object for tracking
     def set_target_obj(self, target_object):
         assert target_object in self.obj_list, "target object {} is not in the list of test objects".format(target_object)
@@ -231,6 +266,13 @@ class PoseRBPF:
         self.rbpf = self.rbpf_list[self.target_obj_idx]
         self.rbpf_ok = self.rbpf_ok_list[self.target_obj_idx]
         self.rbpf_init_max_sim = 0
+
+        if self.refine:
+            self.target_sdf = self.sdf_list[self.target_obj_idx]
+            self.target_sdf_limits = self.sdf_limits_list[self.target_obj_idx]
+            self.target_points = self.points_list[self.target_obj_idx]
+            self.Tco_list = []
+            self.pc_list = []
 
         # estimated states
         self.est_bbox_center = np.zeros((2, self.target_obj_cfg.PF.N_PROCESS))
@@ -295,6 +337,13 @@ class PoseRBPF:
         self.rbpf = self.rbpf_list[self.target_obj_idx]
         self.rbpf_ok = self.rbpf_ok_list[self.target_obj_idx]
         self.rbpf_init_max_sim = 0
+
+        if self.refine:
+            self.target_sdf = self.sdf_list[self.target_obj_idx]
+            self.target_sdf_limits = self.sdf_limits_list[self.target_obj_idx]
+            self.target_points = self.points_list[self.target_obj_idx]
+            self.Tco_list = []
+            self.pc_list = []
 
     def set_intrinsics(self, intrinsics, w, h):
         self.intrinsics = intrinsics
@@ -839,6 +888,8 @@ class PoseRBPF:
 
             if not dry_run:
                 print('Estimating {}, rgb sim = {}, depth sim = {}'.format(target_obj, self.max_sim_rgb, self.max_sim_depth))
+                if self.refine:
+                    self.pose_refine(depth.float(), 50)
 
         if visualize:
             render_rgb, render_depth = self.renderer.render_pose(self.data_intrinsics,
@@ -858,6 +909,34 @@ class PoseRBPF:
         Tco[:3, 3] = self.rbpf.trans_bar
         max_sim = self.log_max_sim[-1]
         return Tco, max_sim
+
+    def pose_refine(self, depth, steps, mask_input=None):
+        T_co_init = np.eye(4, dtype=np.float32)
+        T_co_init[:3, :3] = self.rbpf.rot_bar
+        T_co_init[:3, 3] = self.rbpf.trans_bar
+        ps_c, visible_ratio, mask_viz = self.renderer.estimate_visibile_points(T_co_init, self.target_obj_idx, depth,
+                                                                             self.target_obj_cfg.TRAIN.RENDER_DIST,
+                                                                             intrinsics=self.data_intrinsics,
+                                                                             delta=0.03,
+                                                                             mask_input=mask_input)
+
+        if ps_c is None:
+            self.rbpf_ok = False
+            return mask_viz, 0.0
+
+        T_co_opt, _ = self.sdf_refiner.refine_pose(T_co_init,
+                                                   ps_c,
+                                                   sdf_input=self.target_sdf,
+                                                   sdf_limits_input=self.target_sdf_limits,
+                                                   steps=steps)
+
+        self.Tco_list.append(T_co_opt.copy())
+        self.pc_list.append(ps_c.clone())
+
+        self.rbpf.rot_bar = T_co_opt[:3, :3]
+        self.rbpf.trans_bar = T_co_opt[:3, 3]
+
+        return mask_viz
 
     def run_dataset(self, val_dataset, sequence, only_track_kf=False, kf_skip=1, demo=False):
         self.log_err_r = []
@@ -990,6 +1069,10 @@ class PoseRBPF:
                 torch.cuda.synchronize()
                 time_start = time.time()
                 self.process_poserbpf(images[0], intrinsics, depth=depth_data)
+
+                if self.refine:
+                    self.pose_refine(depth_data.float(), 50)
+
                 torch.cuda.synchronize()
                 time_elapse = time.time() - time_start
                 print('[Filtering] fps = ', 1 / time_elapse)

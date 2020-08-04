@@ -47,7 +47,7 @@ def ros_qt_to_rt(rot, trans):
 class ImageListener:
 
     def __init__(self, object_list, cfg_list, checkpoint_list, codebook_list,
-                 modality, cad_model_dir, category='ycb'):
+                 modality, cad_model_dir, category='ycb', refine=True):
 
         print(' *** Initializing PoseRBPF ROS Node ... ')
 
@@ -71,7 +71,7 @@ class ImageListener:
 
         self.pose_rbpf = PoseRBPF(self.object_list, self.cfg_list, self.ckpt_list,
                                   self.codebook_list, category,
-                                  modality, cad_model_dir)
+                                  modality, cad_model_dir, refine=refine)
 
         # target list
         self.target_list = range(len(self.pose_rbpf.obj_list))
