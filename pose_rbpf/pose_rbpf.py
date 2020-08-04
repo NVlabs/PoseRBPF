@@ -254,7 +254,7 @@ class PoseRBPF:
         self.log_pose = None
         self.log_error = None
 
-        # posecnn prior
+        # prior
         self.prior_uv = [0, 0, 1]
         self.prior_z = 0
         self.prior_t = np.array([0, 0, 0], dtype=np.float32)
@@ -271,6 +271,40 @@ class PoseRBPF:
 
         # print
         print('target object is set to {}'.format(self.target_obj_cfg.PF.TRACK_OBJ))
+
+    def switch_target_obj(self, target_object):
+        # set target object property
+        self.target_obj = target_object
+        self.target_obj_idx = self.obj_list.index(target_object)
+        self.target_obj_encoder = self.aae_list[self.target_obj_idx]
+        self.target_obj_codebook = self.codebook_list[self.target_obj_idx]
+        self.target_obj_cfg = self.cfg_list[self.target_obj_idx]
+
+        if self.modality == 'rgbd':
+            self.target_obj_codebook_depth = self.codebook_list_depth[self.target_obj_idx]
+
+        self.target_box_sz = 2 * self.target_obj_cfg.TRAIN.U0 / self.target_obj_cfg.TRAIN.FU * \
+                             self.target_obj_cfg.TRAIN.RENDER_DIST[0]
+
+        self.target_obj_cfg.PF.FU = self.intrinsics[0, 0]
+        self.target_obj_cfg.PF.FV = self.intrinsics[1, 1]
+        self.target_obj_cfg.PF.U0 = self.intrinsics[0, 2]
+        self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
+
+        # reset particle filter
+        self.rbpf = self.rbpf_list[self.target_obj_idx]
+        self.rbpf_ok = self.rbpf_ok_list[self.target_obj_idx]
+        self.rbpf_init_max_sim = 0
+
+    def set_intrinsics(self, intrinsics, w, h):
+        self.intrinsics = intrinsics
+        self.data_intrinsics = intrinsics
+        self.target_obj_cfg.PF.FU = self.intrinsics[0, 0]
+        self.target_obj_cfg.PF.FV = self.intrinsics[1, 1]
+        self.target_obj_cfg.PF.U0 = self.intrinsics[0, 2]
+        self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
+        if self.renderer.renderer is not None:
+            self.renderer.set_intrinsics(self.intrinsics, w, h)
 
     def visualize_roi(self, image, uv, z, step, phase='tracking', show_gt=False, error=True, uncertainty=False, show=False, color='g', skip=False):
         image_disp = image
@@ -708,7 +742,6 @@ class PoseRBPF:
 
     # filtering
     def process_poserbpf(self, image, intrinsics, depth=None, mask=None, apply_motion_prior=False):
-
         # propagation
         if apply_motion_prior:
             self.rbpf.propagate_particles(self.T_c1c0, self.T_o0o1, 0, 0, intrinsics)
@@ -764,6 +797,67 @@ class PoseRBPF:
         self.est_bbox_size = 128 * self.target_obj_cfg.TRAIN.RENDER_DIST[0] * np.ones_like(self.rbpf.z) / self.rbpf.z
 
         return 0
+
+    def propagate_with_forward_kinematics(self, target_obj):
+        self.switch_target_obj(target_obj)
+        self.rbpf.propagate_particles(self.T_c1c0, self.T_o0o1, 0, 0, torch.from_numpy(self.intrinsics).unsqueeze(0))
+
+    # function used in ros node
+    def pose_estimation_single(self, target_obj, roi, image, depth, visualize=False, dry_run=False):
+
+        # set target object
+        self.switch_target_obj(target_obj)
+
+        if not roi is None:
+            center = np.array([0.5 * (roi[2] + roi[4]), 0.5 * (roi[3] + roi[5]), 1], dtype=np.float32)
+
+            # todo: use segmentation masks
+            # idx_obj = self.obj_list_all.index(self.target_obj) + 1
+            # # there is no large clamp
+            # if self.target_obj == '061_foam_brick':
+            #     idx_obj -= 1
+            # mask_obj = (mask==idx_obj).float().repeat(1,1,3)
+            # depth_input = depth * mask_obj[:, :, [0]]
+
+            self.prior_uv = center
+
+            if self.rbpf_ok_list[self.target_obj_idx] == False:
+                # sample around the center of bounding box
+                self.initialize_poserbpf(image, self.intrinsics,
+                                       self.prior_uv[:2], 100, depth=depth)
+
+                self.process_poserbpf(image,
+                                      torch.from_numpy(self.intrinsics).unsqueeze(0),
+                                      depth=depth)
+
+                if self.max_sim_rgb > 0.85 and self.max_sim_depth > 0.85 and not dry_run:
+                    self.rbpf_ok_list[self.target_obj_idx] = True
+            else:
+                self.process_poserbpf(image,
+                                      torch.from_numpy(self.intrinsics).unsqueeze(0),
+                                      depth=depth)
+
+            if not dry_run:
+                print('Estimating {}, rgb sim = {}, depth sim = {}'.format(target_obj, self.max_sim_rgb, self.max_sim_depth))
+
+        if visualize:
+            render_rgb, render_depth = self.renderer.render_pose(self.data_intrinsics,
+                                                                 self.rbpf_list[self.target_obj_idx].trans_bar,
+                                                                 self.rbpf_list[self.target_obj_idx].rot_bar,
+                                                                 self.target_obj_idx)
+
+            render_rgb = render_rgb[0].permute(1, 2, 0).cpu().numpy()
+            image_disp = 0.4 * image.cpu().numpy() + 0.6 * render_rgb
+            image_disp = np.clip(image_disp, 0, 1.0)
+            plt.figure()
+            plt.imshow(image_disp)
+            plt.show()
+
+        Tco = np.eye(4, dtype=np.float32)
+        Tco[:3, :3] = self.rbpf.rot_bar
+        Tco[:3, 3] = self.rbpf.trans_bar
+        max_sim = self.log_max_sim[-1]
+        return Tco, max_sim
 
     def run_dataset(self, val_dataset, sequence, only_track_kf=False, kf_skip=1, demo=False):
         self.log_err_r = []

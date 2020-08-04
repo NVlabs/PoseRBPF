@@ -186,6 +186,11 @@ class particle_filter():
         return idx
 
     def resample_ddpf(self, codepose, intrinsics, cfg_pf):
+
+        if np.isnan(np.sum(self.weights)):
+            self.weights = np.random.random_sample(self.weights.shape)
+            self.weights /= np.sum(self.weights)
+
         if self.resample_method == 'systematic':
             indexes = systematic_resample(self.weights)
         else:
@@ -202,6 +207,7 @@ class particle_filter():
 
         rot_sum = torch.sum(self.rot.view(self.n_particles, -1), dim=0)
         rot_wt, rot_idx = torch.topk(rot_sum, cfg_pf.N_E_ROT)
+        rot_idx = torch.clamp(rot_idx, 0, 191807)
         rot_wt /= torch.sum(rot_wt)
         rot_wt = rot_wt.cpu().numpy()
 
