@@ -1,3 +1,7 @@
+# Copyright (c) 2020 NVIDIA Corporation. All rights reserved.
+# This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
+# text can be found in LICENSE.md
+
 import rospy
 import tf
 import message_filters
@@ -184,8 +188,15 @@ class ImageListener:
             return
 
         # todo: call object detection
+        # ...
+        if len(self.pose_rbpf.obj_list) == 1:
+            rois = np.array([[0, 0, 447, 167, 447, 167]], dtype=np.float32)
+        else:
+            rois = np.array([[0, 0, 332, 150, 332, 150],
+                             [0, 1, 480, 193, 480, 193],
+                             [0, 2, 407, 370, 407, 370]], dtype=np.float32)
+
         # call pose estimation function
-        rois = np.array([[0, 0, 447, 167, 447, 167]], dtype=np.float32)
         self.pose_estimation(input_rgb, input_depth, rois)
 
 
@@ -260,5 +271,3 @@ class ImageListener:
             Tco_list_init.append(Tco.copy())
             obj_list_init.append(target_obj)
             sim_list_init.append(max_sim)
-
-        # todo: pose refinement

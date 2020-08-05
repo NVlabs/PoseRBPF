@@ -72,7 +72,7 @@ sh build.sh
 ```
 
 ## Testing on the YCB Video Dataset
-- Download checkpoints from [the google drive folder](https://drive.google.com/drive/folders/1oBJvabEbuCN-AXQwxGEE5UDOaYAqZvp_?usp=sharing) (```ycb_rgbd.tar.gz``` or ```ycb_rgb.tar.gz```) and unzip to the checkpoint directory.
+- Download checkpoints from [the google drive folder](https://drive.google.com/drive/folders/1mkW9RSgXHKnYmSJIKEI3pjaNgc_IKpgD?usp=sharing) (```ycb_rgbd_full.tar.gz``` or ```ycb_rgb_full.tar.gz```) and unzip to the checkpoint directory.
 - Download all the data in the [YCB Video Dataset](https://rse-lab.cs.washington.edu/projects/posecnn/) so the ```../YCB_Video_Dataset/data``` folder contains all the sequences.
 - Run RGB-D tracking (use ```002_master_chef_can``` as an example here):
 ```angular2html
@@ -83,7 +83,53 @@ sh scripts/test_ycb_rgbd/val_ycb_002_rgbd.sh 0 1
 sh scripts/test_ycb_rgb/val_ycb_002_rgb.sh 0 1
 ```
 
-## Testing on the TLess Dataset
+## Testing on the T-LESS Dataset
+- Download checkpoints from [the google drive folder](https://drive.google.com/drive/folders/1mkW9RSgXHKnYmSJIKEI3pjaNgc_IKpgD?usp=sharing) (```tless_rgbd_full.tar.gz``` or ```tless_rgb_full.tar.gz```) and unzip to the checkpoint directory.
+- Download all the data in the [T-LESS Dataset](http://cmp.felk.cvut.cz/t-less/download.html) so the ```../TLess/``` folder contains all the sequences.
+- Download all the models for T-LESS objects from [the google drive folder](https://drive.google.com/file/d/15rCCI_hgsjei3zlvbF05HUzoYm2uP2fE/view?usp=sharing).
+- Then you should have files organized like:
+```angular2html
+├── ...
+├── PoseRBPF
+|   |── cad_models
+|   |   |── ycb_models
+|   |   |── tless_models
+|   |   └── ...
+|   |── checkpoints
+|   |   |── tless_ckpts_roi_rgbd
+|   |   |── tless_codebooks_roi_rgbd
+|   |   |── tless_configs_roi_rgbd
+|   |   └── ... 
+|   |── detections
+|   |   |── posecnn_detections
+|   |   |── tless_retina_detections 
+|   |── config                      # configuration files for training and DPF
+|   |── networks                    # auto-encoder networks
+|   |── pose_rbpf                   # particle filters
+|   └── ...
+|── YCB_Video_Dataset               # to store ycb data
+|   |── cameras  
+|   |── data 
+|   |── image_sets 
+|   |── keyframes 
+|   |── poses               
+|   └── ...   
+|── TLess               # to store tless data
+|   |── t-less_v2 
+|── tless_ckpts_roi_rgbd
+|   |   |── test_primesense
+|   |   └── ... 
+|   └── ...        
+└── ...
+```
+- Run RGB-D tracking (use ```obj_01``` as an example here):
+```angular2html
+sh scripts/test_tless_rgbd/val_tless_01_rgbd.sh 0 1
+```
+- Run RGB tracking (use ```obj_01``` as an example here):
+```angular2html
+sh scripts/test_tless_rgb/val_tless_01_rgb.sh 0 1
+```
 
 ## Online Pose Estimation using ROS
 - Due to the incompatibility between ROS Kinetic and Python 3, the ROS node only runs with Python 2.7. We first create the virtual env with ```pose_rbpf_env_py2.yml```:
@@ -96,7 +142,7 @@ conda activate pose_rbpf_env_py2
 ```angular2html
 sh build.sh
 ```
-
+- Make sure you can run the demo above first.
 - Install ROS if it's not there:
 ```angular2html
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
@@ -124,6 +170,7 @@ sudo rosdep init
 rosdep update
 ```
 
+### Single object tracking demo:
 - Download demo rosbag:
 ```angular2html
 ./scripts/download_ros_demo.sh
@@ -144,4 +191,37 @@ rosrun rviz rviz -d ./ros/tracking.rviz
 rosbag play ./ros_data/demo_single.bag
 ```
 
+### Multiple object tracking demo:
+- Download demo rosbag:
+```angular2html
+./scripts/download_ros_demo_multiple.sh
+```
+- Download additional checkpoints from [here](https://drive.google.com/file/d/19V75k5QzczyXIE9bu-WJJoqJUpAVy1G0/view?usp=sharing) and add to ```./checkpoints/```
+- Run PoseRBPF node (with roscore running in another terminal):
+```angular2html
+./scripts/run_ros_demo_multiple.sh
+```
+
+- Run RVIZ in the PoseRBPF directory:
+```angular2html
+rosrun rviz rviz -d ./ros/tracking.rviz
+```
+
+- Once you see ```*** PoseRBPF Ready ...``` in the PoseRBPF terminal, run rosbag in another terminal, then you should be able to see the tracking demo:
+```angular2html
+rosbag play ./ros_data/demo_multiple.bag
+```
+
 ## Training
+- Download microsoft coco dataset 2017 val images from [here](http://images.cocodataset.org/zips/val2017.zip) for data augmentation.
+- Store the folder ```val2017``` in ```../coco/```
+- Run training example for ```002_master_chef_can``` in the YCB objects. The training should be able to run on one single NVIDIA TITAN Xp GPU:
+```angular2html
+sh scripts/train_ycb_rgbd/train_script_ycb_002.sh
+```
+
+## Acknowledgements
+We have referred to part of the RoI align code from [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark).
+
+## License
+PoseRBPF is licensed under the [NVIDIA Source Code License - Non-commercial](LICENSE.md).

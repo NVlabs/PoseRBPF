@@ -879,7 +879,7 @@ class PoseRBPF:
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
                                       depth=depth)
 
-                if self.max_sim_rgb > 0.85 and self.max_sim_depth > 0.85 and not dry_run:
+                if self.max_sim_rgb > 0.7 and self.max_sim_depth > 0.8 and not dry_run:
                     self.rbpf_ok_list[self.target_obj_idx] = True
             else:
                 self.process_poserbpf(image,
