@@ -176,6 +176,11 @@ rosdep update
 ./scripts/download_ros_demo.sh
 ```
 
+- Run PoseCNN node (with roscore running in another terminal):
+```angular2html
+./scripts/run_ros_demo_posecnn.sh
+```
+
 - Run PoseRBPF node (with roscore running in another terminal):
 ```angular2html
 ./scripts/run_ros_demo.sh
@@ -196,7 +201,14 @@ rosbag play ./ros_data/demo_single.bag
 ```angular2html
 ./scripts/download_ros_demo_multiple.sh
 ```
+
 - Download additional checkpoints from [here](https://drive.google.com/file/d/19V75k5QzczyXIE9bu-WJJoqJUpAVy1G0/view?usp=sharing) and add to ```./checkpoints/```
+
+- Run PoseCNN node (with roscore running in another terminal):
+```angular2html
+./scripts/run_ros_demo_posecnn.sh
+```
+
 - Run PoseRBPF node (with roscore running in another terminal):
 ```angular2html
 ./scripts/run_ros_demo_multiple.sh
