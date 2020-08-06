@@ -31,6 +31,99 @@ conda activate pose_rbpf_env
 sh build.sh
 ```
 
+## Online Real-world Pose Estimation using ROS
+- Due to the incompatibility between ROS Kinetic and Python 3, the ROS node only runs with Python 2.7. We first create the virtual env with ```pose_rbpf_env_py2.yml```:
+```angular2html
+conda env create -f pose_rbpf_env_py2.yml
+conda activate pose_rbpf_env_py2
+```
+- compile the YCB Renderer according to the [instruction](./ycb_render/README.md).
+- compile the utility functions with:
+```angular2html
+sh build.sh
+```
+- Make sure you can run the demo above first.
+- Install ROS if it's not there:
+```angular2html
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+sudo apt-get update
+sudo apt-get install ros-kinetic-desktop-full
+```
+
+- Update python packages:
+```angular2html
+conda install -c auto catkin_pkg
+pip install -U rosdep rosinstall_generator wstool rosinstall six vcstools
+pip install msgpack
+pip install empy
+```
+
+- Source ROS (every time before launching the node):
+```angular2html
+source /opt/ros/kinetic/setup.bash
+```
+
+- Initialze rosdep:
+```angular2html
+sudo rosdep init
+rosdep update
+```
+
+### Single object tracking demo:
+- Download demo rosbag:
+```angular2html
+./scripts/download_ros_demo.sh
+```
+
+- Run PoseCNN node (with roscore running in another terminal):
+```angular2html
+./scripts/run_ros_demo_posecnn.sh
+```
+
+- Run PoseRBPF node (with roscore running in another terminal):
+```angular2html
+./scripts/run_ros_demo.sh
+```
+
+- Run RVIZ in the PoseRBPF directory:
+```angular2html
+rosrun rviz rviz -d ./ros/tracking.rviz
+```
+
+- Once you see ```*** PoseRBPF Ready ...``` in the PoseRBPF terminal, run rosbag in another terminal, then you should be able to see the tracking demo:
+```angular2html
+rosbag play ./ros_data/demo_single.bag
+```
+
+### Multiple object tracking demo:
+- Download demo rosbag:
+```angular2html
+./scripts/download_ros_demo_multiple.sh
+```
+
+- Download additional checkpoints from [here](https://drive.google.com/file/d/19V75k5QzczyXIE9bu-WJJoqJUpAVy1G0/view?usp=sharing) and add to ```./checkpoints/```
+
+- Run PoseCNN node (with roscore running in another terminal):
+```angular2html
+./scripts/run_ros_demo_posecnn.sh
+```
+
+- Run PoseRBPF node (with roscore running in another terminal):
+```angular2html
+./scripts/run_ros_demo_multiple.sh
+```
+
+- Run RVIZ in the PoseRBPF directory:
+```angular2html
+rosrun rviz rviz -d ./ros/tracking.rviz
+```
+
+- Once you see ```*** PoseRBPF Ready ...``` in the PoseRBPF terminal, run rosbag in another terminal, then you should be able to see the tracking demo:
+```angular2html
+rosbag play ./ros_data/demo_multiple.bag
+```
+
 ## A quick demo on the YCB Video Dataset 
 - The demo shows tracking ```003_cracker_box``` on YCB Video Dataset.
 - Run script ```download_demo.sh``` to download checkpoint (434 MB), CAD models (743 MB), 2D detections (13 MB), and necessary data (3 GB) for the demo:
@@ -129,99 +222,6 @@ sh scripts/test_tless_rgbd/val_tless_01_rgbd.sh 0 1
 - Run RGB tracking (use ```obj_01``` as an example here):
 ```angular2html
 sh scripts/test_tless_rgb/val_tless_01_rgb.sh 0 1
-```
-
-## Online Pose Estimation using ROS
-- Due to the incompatibility between ROS Kinetic and Python 3, the ROS node only runs with Python 2.7. We first create the virtual env with ```pose_rbpf_env_py2.yml```:
-```angular2html
-conda env create -f pose_rbpf_env_py2.yml
-conda activate pose_rbpf_env_py2
-```
-- compile the YCB Renderer according to the [instruction](./ycb_render/README.md).
-- compile the utility functions with:
-```angular2html
-sh build.sh
-```
-- Make sure you can run the demo above first.
-- Install ROS if it's not there:
-```angular2html
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-sudo apt-get update
-sudo apt-get install ros-kinetic-desktop-full
-```
-
-- Update python packages:
-```angular2html
-conda install -c auto catkin_pkg
-pip install -U rosdep rosinstall_generator wstool rosinstall six vcstools
-pip install msgpack
-pip install empy
-```
-
-- Source ROS (every time before launching the node):
-```angular2html
-source /opt/ros/kinetic/setup.bash
-```
-
-- Initialze rosdep:
-```angular2html
-sudo rosdep init
-rosdep update
-```
-
-### Single object tracking demo:
-- Download demo rosbag:
-```angular2html
-./scripts/download_ros_demo.sh
-```
-
-- Run PoseCNN node (with roscore running in another terminal):
-```angular2html
-./scripts/run_ros_demo_posecnn.sh
-```
-
-- Run PoseRBPF node (with roscore running in another terminal):
-```angular2html
-./scripts/run_ros_demo.sh
-```
-
-- Run RVIZ in the PoseRBPF directory:
-```angular2html
-rosrun rviz rviz -d ./ros/tracking.rviz
-```
-
-- Once you see ```*** PoseRBPF Ready ...``` in the PoseRBPF terminal, run rosbag in another terminal, then you should be able to see the tracking demo:
-```angular2html
-rosbag play ./ros_data/demo_single.bag
-```
-
-### Multiple object tracking demo:
-- Download demo rosbag:
-```angular2html
-./scripts/download_ros_demo_multiple.sh
-```
-
-- Download additional checkpoints from [here](https://drive.google.com/file/d/19V75k5QzczyXIE9bu-WJJoqJUpAVy1G0/view?usp=sharing) and add to ```./checkpoints/```
-
-- Run PoseCNN node (with roscore running in another terminal):
-```angular2html
-./scripts/run_ros_demo_posecnn.sh
-```
-
-- Run PoseRBPF node (with roscore running in another terminal):
-```angular2html
-./scripts/run_ros_demo_multiple.sh
-```
-
-- Run RVIZ in the PoseRBPF directory:
-```angular2html
-rosrun rviz rviz -d ./ros/tracking.rviz
-```
-
-- Once you see ```*** PoseRBPF Ready ...``` in the PoseRBPF terminal, run rosbag in another terminal, then you should be able to see the tracking demo:
-```angular2html
-rosbag play ./ros_data/demo_multiple.bag
 ```
 
 ## Training
