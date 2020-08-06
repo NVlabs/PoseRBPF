@@ -24,6 +24,7 @@ from geometry_msgs.msg import PoseStamped, PoseArray
 from rospy.numpy_msg import numpy_msg
 import matplotlib.pyplot as plt
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
+from utils.nms import nms
 
 from pose_rbpf.pose_rbpf import *
 import scipy.io
@@ -95,6 +96,7 @@ class ImageListener:
         self.kf_time_stamp = None
         # roi information
         self.prefix = '00_'
+        self.target_frame = 'measured/base_link'
 
         # initialize a node
         rospy.init_node('poserbpf_image_listener')
@@ -161,6 +163,52 @@ class ImageListener:
         self.pose_rbpf.set_target_obj(target_obj)
         self.pose_rbpf.pose_estimation_single(target_obj, roi, image_rgb, image_depth, dry_run=True)
 
+
+    def query_posecnn_detection(self, classes):
+
+        # detection information of the target object
+        rois_est = np.zeros((0, 7), dtype=np.float32)
+        # TODO look for multiple object instances
+        max_objects = 5
+        for i in range(len(classes)):
+
+            for object_id in range(max_objects):
+
+                # check posecnn frame
+                cls = classes[i]
+                suffix_frame = '_%02d_roi' % (object_id)
+                source_frame = 'posecnn/' + cls + suffix_frame
+
+                try:
+                    # print('look for posecnn detection ' + source_frame)
+                    trans, rot = self.listener.lookupTransform(self.target_frame, source_frame, rospy.Time(0))
+                    n = trans[0]
+                    secs = trans[1]
+                    now = rospy.Time.now()
+                    if abs(now.secs - secs) > 1.0:
+                        print 'posecnn pose for %s time out %f %f' % (source_frame, now.secs, secs)
+                        continue
+                    roi = np.zeros((1, 7), dtype=np.float32)
+                    roi[0, 0] = 0
+                    roi[0, 1] = i
+                    roi[0, 2] = rot[0] * n
+                    roi[0, 3] = rot[1] * n
+                    roi[0, 4] = rot[2] * n
+                    roi[0, 5] = rot[3] * n
+                    roi[0, 6] = trans[2]
+                    rois_est = np.concatenate((rois_est, roi), axis=0)
+                    print('find posecnn detection ' + source_frame)
+                except:
+                    continue
+
+        if rois_est.shape[0] > 0:
+            # non-maximum suppression within class
+            index = nms(rois_est, 0.2)
+            rois_est = rois_est[index, :]
+
+        return rois_est
+
+
     def process_data(self):
         # callback data
         with lock:
@@ -187,18 +235,21 @@ class ImageListener:
             # print('missing forward kinematics info')
             return
 
-        # todo: call object detection
-        # ...
+        # call object detection
+        '''
         if len(self.pose_rbpf.obj_list) == 1:
             rois = np.array([[0, 0, 447, 167, 447, 167]], dtype=np.float32)
         else:
             rois = np.array([[0, 0, 332, 150, 332, 150],
                              [0, 1, 480, 193, 480, 193],
                              [0, 2, 407, 370, 407, 370]], dtype=np.float32)
+        '''
+
+        rois = self.query_posecnn_detection(self.pose_rbpf.obj_list)
+        rois = rois[:, :6]
 
         # call pose estimation function
         self.pose_estimation(input_rgb, input_depth, rois)
-
 
         for idx_tf in range(len(self.pose_rbpf.rbpf_list)):
             if not self.pose_rbpf.rbpf_ok_list[idx_tf]:

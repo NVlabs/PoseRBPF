@@ -4,7 +4,7 @@ set -x
 set -e
 
 export PYTHONUNBUFFERED="True"
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 ./ros/start_posecnn_ros.py --gpu 0 \
   --instance 0 \

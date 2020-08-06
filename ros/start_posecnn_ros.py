@@ -37,7 +37,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 from transforms3d.quaternions import mat2quat, quat2mat, qmult
 from utils.render_utils import render_image_detection
 from utils.se3 import *
-from utils.nms import *
+from utils.nms import nms
 from utils.blob import pad_im
 
 lock = threading.Lock()
@@ -87,21 +87,21 @@ class ImageListener:
         self.prefix = prefix
 
         # initialize a node
-        rospy.init_node('posecnn_rgb' + suffix)
+        rospy.init_node('posecnn_rgb')
         self.listener = tf.TransformListener()
         self.br = tf.TransformBroadcaster()
-        self.label_pub = rospy.Publisher('posecnn_label' + suffix, Image, queue_size=10)
-        self.rgb_pub = rospy.Publisher('posecnn_rgb' + suffix, Image, queue_size=10)
-        self.depth_pub = rospy.Publisher('posecnn_depth' + suffix, Image, queue_size=10)
-        self.posecnn_pub = rospy.Publisher('posecnn_detection' + suffix, Image, queue_size=10)
+        self.label_pub = rospy.Publisher('posecnn_label', Image, queue_size=10)
+        self.rgb_pub = rospy.Publisher('posecnn_rgb', Image, queue_size=10)
+        self.depth_pub = rospy.Publisher('posecnn_depth', Image, queue_size=10)
+        self.posecnn_pub = rospy.Publisher('posecnn_detection', Image, queue_size=10)
 
         # create pose publisher for each known object class
         self.pubs = []
         for i in range(1, self.dataset.num_classes):
             if self.dataset.classes[i][3] == '_':
-                cls = prefix + self.dataset.classes[i][4:]
+                cls = self.dataset.classes[i][4:]
             else:
-                cls = prefix + self.dataset.classes[i]
+                cls = self.dataset.classes[i]
             self.pubs.append(rospy.Publisher('/objects/prior_pose/' + cls, PoseStamped, queue_size=10))
 
         print('***PoseCNN ready, waiting for camera images***')
@@ -308,9 +308,6 @@ class ImageListener:
         if not rois.shape[0]:
             return
 
-        fusion_type = ''
-        if cfg.TRAIN.VERTEX_REG_DELTA:
-            fusion_type = '_rgbd_'
         indexes = np.zeros((self.dataset.num_classes, ), dtype=np.int32)
         index = np.argsort(rois[:, 2])
         rois = rois[index, :]
@@ -379,7 +376,7 @@ class ImageListener:
                 location = location + (extent / 2) * d
 
                 # publish tf raw
-                self.br.sendTransform(location, [0, 0, 0, 1], now, self.prefix + cls_name + '_raw', self.target_frame)
+                self.br.sendTransform(location, [0, 0, 0, 1], now, cls_name + '_raw', self.target_frame)
 
                 # project location to base plane
                 location[2] = extent / 2
@@ -387,16 +384,11 @@ class ImageListener:
                 print('-------------------------------------------')
 
                 # publish tf
-                self.br.sendTransform(location, [0, 0, 0, 1], now, self.prefix + cls_name, self.target_frame)
+                self.br.sendTransform(location, [0, 0, 0, 1], now, cls_name, self.target_frame)
 
                 # publish tf detection
-                if self.dataset.classes[cls][3] == '_':
-                    name = self.prefix + cls_name[4:]
-                else:
-                    name = self.prefix + cls_name
-                name = name + fusion_type
                 indexes[cls] += 1
-                name = name + '_%02d' % (indexes[cls])
+                name = cls_name + '_%02d' % (indexes[cls])
                 tf_name = os.path.join("posecnn", name)
 
                 # send another transformation as bounding box (mis-used)
