@@ -31,6 +31,46 @@ conda activate pose_rbpf_env
 sh build.sh
 ```
 
+## A quick demo on the YCB Video Dataset 
+- The demo shows tracking ```003_cracker_box``` on YCB Video Dataset.
+- Run script ```download_demo.sh``` to download checkpoint (434 MB), CAD models (743 MB), 2D detections (13 MB), and necessary data (3 GB) for the demo:
+```angular2html
+./scripts/download_demo.sh
+```
+- Then you should have files organized like:
+```angular2html
+├── ...
+├── PoseRBPF
+|   |── cad_models
+|   |   |── ycb_models
+|   |   └── ...
+|   |── checkpoints
+|   |   |── ycb_ckpts_roi_rgbd
+|   |   |── ycb_codebooks_roi_rgbd
+|   |   |── ycb_configs_roi_rgbd
+|   |   └── ... 
+|   |── detections
+|   |   |── posecnn_detections
+|   |   |── tless_retina_detections 
+|   |── config                      # configuration files for training and DPF
+|   |── networks                    # auto-encoder networks
+|   |── pose_rbpf                   # particle filters
+|   └── ...
+|── YCB_Video_Dataset               # to store ycb data
+|   |── cameras  
+|   |── data 
+|   |── image_sets 
+|   |── keyframes 
+|   |── poses               
+|   └── ...           
+└── ...
+```
+
+- Run demo with ```003_cracker_box```. The results will be stored in ```./results/```
+```angular2html
+./scripts/run_demo.sh
+```
+
 ## Online Real-world Pose Estimation using ROS
 - Due to the incompatibility between ROS Kinetic and Python 3, the ROS node only runs with Python 2.7. We first create the virtual env with ```pose_rbpf_env_py2.yml```:
 ```angular2html
@@ -122,46 +162,6 @@ rosrun rviz rviz -d ./ros/tracking.rviz
 - Once you see ```*** PoseRBPF Ready ...``` in the PoseRBPF terminal, run rosbag in another terminal, then you should be able to see the tracking demo:
 ```angular2html
 rosbag play ./ros_data/demo_multiple.bag
-```
-
-## A quick demo on the YCB Video Dataset 
-- The demo shows tracking ```003_cracker_box``` on YCB Video Dataset.
-- Run script ```download_demo.sh``` to download checkpoint (434 MB), CAD models (743 MB), 2D detections (13 MB), and necessary data (3 GB) for the demo:
-```angular2html
-./scripts/download_demo.sh
-```
-- Then you should have files organized like:
-```angular2html
-├── ...
-├── PoseRBPF
-|   |── cad_models
-|   |   |── ycb_models
-|   |   └── ...
-|   |── checkpoints
-|   |   |── ycb_ckpts_roi_rgbd
-|   |   |── ycb_codebooks_roi_rgbd
-|   |   |── ycb_configs_roi_rgbd
-|   |   └── ... 
-|   |── detections
-|   |   |── posecnn_detections
-|   |   |── tless_retina_detections 
-|   |── config                      # configuration files for training and DPF
-|   |── networks                    # auto-encoder networks
-|   |── pose_rbpf                   # particle filters
-|   └── ...
-|── YCB_Video_Dataset               # to store ycb data
-|   |── cameras  
-|   |── data 
-|   |── image_sets 
-|   |── keyframes 
-|   |── poses               
-|   └── ...           
-└── ...
-```
-
-- Run demo with ```003_cracker_box```. The results will be stored in ```./results/```
-```angular2html
-./scripts/run_demo.sh
 ```
 
 ## Testing on the YCB Video Dataset
