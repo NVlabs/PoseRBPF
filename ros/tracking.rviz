@@ -14,11 +14,10 @@ Panels:
         - /TF1
         - /TF1/Frames1
         - /DepthCloud2
-        - /DepthCloud2/Status1
         - /DepthCloud2/Auto Size1
         - /Image1
       Splitter Ratio: 0.686800897
-    Tree Height: 653
+    Tree Height: 377
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -125,7 +124,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /posecnn_detection
+      Image Topic: /posecnn_detection_00
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -151,6 +150,10 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 15
       Frames:
+        00_003_cracker_box:
+          Value: true
+        00_003_cracker_box_raw:
+          Value: true
         00_base_link:
           Value: true
         All Enabled: false
@@ -292,13 +295,21 @@ Visualization Manager:
           Value: true
         panda_wrist_end_pt:
           Value: true
+        posecnn/00_cracker_box_01_roi:
+          Value: true
         posecnn/00_cracker_box_rgb__01_roi:
+          Value: true
+        posecnn/00_cracker_box_rgb__02_roi:
           Value: true
         posecnn/00_tomato_soup_can_rgb__01_roi:
           Value: true
         posecnn_camera_link:
           Value: true
         poserbpf/003_cracker_box:
+          Value: true
+        poserbpf/006_mustard_bottle:
+          Value: true
+        poserbpf/024_bowl:
           Value: true
         right_gripper:
           Value: true
@@ -309,113 +320,114 @@ Visualization Manager:
       Show Names: false
       Tree:
         00_base_link:
-          {}
-        base_link:
-          measured/base_link:
-            measured/panda_link0:
-              measured/panda_link1:
-                measured/panda_link2:
-                  measured/panda_link3:
-                    measured/panda_link4:
-                      measured/panda_forearm_end_pt:
-                        measured/panda_forearm_mid_pt:
-                          measured/panda_forearm_mid_pt_shifted:
-                            {}
-                      measured/panda_link5:
-                        measured/panda_forearm_distal:
-                          {}
-                        measured/panda_link6:
-                          measured/panda_link7:
-                            measured/panda_link8:
-                              measured/panda_hand:
-                                measured/camera_bottom_screw_frame:
-                                  measured/camera_link:
-                                    measured/camera_depth_frame:
-                                      measured/camera_color_frame:
-                                        measured/camera_color_optical_frame:
-                                          {}
-                                      measured/camera_depth_optical_frame:
-                                        {}
-                                      measured/camera_left_ir_frame:
-                                        measured/camera_left_ir_optical_frame:
-                                          {}
-                                      measured/camera_right_ir_frame:
-                                        measured/camera_right_ir_optical_frame:
-                                          {}
-                                measured/panda_face_back_left:
-                                  {}
-                                measured/panda_face_back_right:
-                                  {}
-                                measured/panda_face_left:
-                                  {}
-                                measured/panda_face_right:
-                                  {}
-                                measured/panda_leftfinger:
-                                  measured/panda_leftfingertip:
-                                    {}
-                                measured/panda_rightfinger:
-                                  measured/panda_rightfingertip:
-                                    {}
-                              measured/right_gripper:
-                                {}
-                            measured/panda_wrist_end_pt:
+          base_link:
+            measured/base_link:
+              measured/panda_link0:
+                measured/panda_link1:
+                  measured/panda_link2:
+                    measured/panda_link3:
+                      measured/panda_link4:
+                        measured/panda_forearm_end_pt:
+                          measured/panda_forearm_mid_pt:
+                            measured/panda_forearm_mid_pt_shifted:
                               {}
-            posecnn/00_cracker_box_rgb__01_roi:
-              {}
-            posecnn/00_tomato_soup_can_rgb__01_roi:
-              {}
-            posecnn_camera_link:
-              {}
-            poserbpf/003_cracker_box:
-              {}
-          panda_link0:
-            panda_link1:
-              panda_link2:
-                panda_link3:
-                  panda_link4:
-                    panda_forearm_end_pt:
-                      panda_forearm_mid_pt:
-                        panda_forearm_mid_pt_shifted:
-                          {}
-                    panda_link5:
-                      panda_forearm_distal:
-                        {}
-                      panda_link6:
-                        panda_link7:
-                          panda_link8:
-                            panda_hand:
-                              camera_bottom_screw_frame:
-                                camera_link:
-                                  camera_depth_frame:
-                                    camera_color_frame:
-                                      camera_color_optical_frame:
-                                        {}
-                                    camera_depth_optical_frame:
+                        measured/panda_link5:
+                          measured/panda_forearm_distal:
+                            {}
+                          measured/panda_link6:
+                            measured/panda_link7:
+                              measured/panda_link8:
+                                measured/panda_hand:
+                                  measured/camera_bottom_screw_frame:
+                                    measured/camera_link:
+                                      measured/camera_depth_frame:
+                                        measured/camera_color_frame:
+                                          measured/camera_color_optical_frame:
+                                            {}
+                                        measured/camera_depth_optical_frame:
+                                          {}
+                                        measured/camera_left_ir_frame:
+                                          measured/camera_left_ir_optical_frame:
+                                            {}
+                                        measured/camera_right_ir_frame:
+                                          measured/camera_right_ir_optical_frame:
+                                            {}
+                                  measured/panda_face_back_left:
+                                    {}
+                                  measured/panda_face_back_right:
+                                    {}
+                                  measured/panda_face_left:
+                                    {}
+                                  measured/panda_face_right:
+                                    {}
+                                  measured/panda_leftfinger:
+                                    measured/panda_leftfingertip:
                                       {}
-                                    camera_left_ir_frame:
-                                      camera_left_ir_optical_frame:
-                                        {}
-                                    camera_right_ir_frame:
-                                      camera_right_ir_optical_frame:
-                                        {}
-                              panda_face_back_left:
-                                {}
-                              panda_face_back_right:
-                                {}
-                              panda_face_left:
-                                {}
-                              panda_face_right:
-                                {}
-                              panda_leftfinger:
-                                panda_leftfingertip:
+                                  measured/panda_rightfinger:
+                                    measured/panda_rightfingertip:
+                                      {}
+                                measured/right_gripper:
                                   {}
-                              panda_rightfinger:
-                                panda_rightfingertip:
-                                  {}
-                            right_gripper:
-                              {}
-                          panda_wrist_end_pt:
+                              measured/panda_wrist_end_pt:
+                                {}
+              posecnn/00_cracker_box_rgb__01_roi:
+                {}
+              posecnn/00_cracker_box_rgb__02_roi:
+                {}
+              posecnn/00_tomato_soup_can_rgb__01_roi:
+                {}
+              posecnn_camera_link:
+                {}
+              poserbpf/003_cracker_box:
+                {}
+            panda_link0:
+              panda_link1:
+                panda_link2:
+                  panda_link3:
+                    panda_link4:
+                      panda_forearm_end_pt:
+                        panda_forearm_mid_pt:
+                          panda_forearm_mid_pt_shifted:
                             {}
+                      panda_link5:
+                        panda_forearm_distal:
+                          {}
+                        panda_link6:
+                          panda_link7:
+                            panda_link8:
+                              panda_hand:
+                                camera_bottom_screw_frame:
+                                  camera_link:
+                                    camera_depth_frame:
+                                      camera_color_frame:
+                                        camera_color_optical_frame:
+                                          {}
+                                      camera_depth_optical_frame:
+                                        {}
+                                      camera_left_ir_frame:
+                                        camera_left_ir_optical_frame:
+                                          {}
+                                      camera_right_ir_frame:
+                                        camera_right_ir_optical_frame:
+                                          {}
+                                panda_face_back_left:
+                                  {}
+                                panda_face_back_right:
+                                  {}
+                                panda_face_left:
+                                  {}
+                                panda_face_right:
+                                  {}
+                                panda_leftfinger:
+                                  panda_leftfingertip:
+                                    {}
+                                panda_rightfinger:
+                                  panda_rightfingertip:
+                                    {}
+                              right_gripper:
+                                {}
+                            panda_wrist_end_pt:
+                              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -516,7 +528,7 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1401
+  Height: 1148
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
@@ -525,7 +537,7 @@ Window Geometry:
     collapsed: false
   PoseRBPF:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000027c0000031afc020000000afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006100fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000020a000002cc000000d500fffffffb0000000a0049006d00610067006501000004da0000004a0000001600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065010000037f000000b7000000000000000000000001000001ee000001f9fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fc0000023d000001f90000000000fffffffa000000000100000002fb0000000a0049006d0061006700650100000000ffffffff0000000000000000fb0000000a005600690065007700730000000551000001ee0000010b00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000589000001e4fc010000000bfb000000100050006f0073006500520042005000460100000000000002bd0000006100fffffffb0000000e0050006f007300650043004e004e01000002c10000017e0000005d00fffffffb0000000a0049006d00610067006501000003e7000001a70000000000000000fb00000012007200670062005f0069006e0070007500740100000443000001460000006000fffffffb0000001600640065007000740068005f0069006e007000750074000000042e000000fb0000006d00fffffffb0000001600640065007000740068005f0069006e0070007500740100000000000001aa0000000000000000fb00000012007200670062005f0069006e00700075007401000001b0000001c20000000000000000fb000000100050006f0073006500520042005000460100000378000001de0000000000000000fb0000000e0050006f007300650043004e004e010000055c000001e30000000000000000fb0000000a00560069006500770073030000004e00000080000002e100000197fb000000160050006f007300650043004e004e0020006f006c006401000006b30000008c0000000000000000000000030000058900000038fc0100000002fb0000000800540069006d00650100000000000005890000024800fffffffb0000000800540069006d00650100000000000004500000000000000000000003090000031a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000027c000001fafc020000000afb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006600fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000212000001c5000000e200fffffffb0000000a0049006d00610067006501000003dd0000002f0000001b00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065010000037f000000b7000000000000000000000001000001ee000001f9fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fc0000023d000001f90000000000fffffffa000000000100000002fb0000000a0049006d0061006700650100000000ffffffff0000000000000000fb0000000a005600690065007700730000000551000001ee0000011e00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000589000001e4fc010000000bfb000000100050006f0073006500520042005000460100000000000001df0000008e00fffffffb0000000e0050006f007300650043004e004e01000001e5000001cf0000008800fffffffb0000000a0049006d00610067006501000003e7000001a70000000000000000fb00000012007200670062005f0069006e00700075007401000003ba000001cf0000008b00fffffffb0000001600640065007000740068005f0069006e007000750074000000042e000000fb000000a200fffffffb0000001600640065007000740068005f0069006e0070007500740100000000000001aa0000000000000000fb00000012007200670062005f0069006e00700075007401000001b0000001c20000000000000000fb000000100050006f0073006500520042005000460100000378000001de0000000000000000fb0000000e0050006f007300650043004e004e010000055c000001e30000000000000000fb0000000a00560069006500770073030000004e00000080000002e100000197fb000000160050006f007300650043004e004e0020006f006c006401000006b30000008c0000000000000000000000030000058900000046fc0100000002fb0000000800540069006d0065010000000000000589000003cc00fffffffb0000000800540069006d0065010000000000000450000000000000000000000307000001fa00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -535,8 +547,8 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1417
-  X: 403
-  Y: 26
+  X: 125
+  Y: 24
   depth_input:
     collapsed: false
   rgb_input:

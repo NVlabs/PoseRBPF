@@ -102,5 +102,3 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         if listener.input_rgb is not None:
             listener.process_data()
-
-

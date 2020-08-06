@@ -12,6 +12,7 @@ logs
 checkpoints/
 results/
 data_training/
+utils/bbox.c
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
