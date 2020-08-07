@@ -216,6 +216,22 @@ class PoseRBPF:
         self.target_sdf = None
         self.target_sdf_limits = None
         self.target_points = None
+
+        # load points
+        if self.obj_ctg == 'ycb':
+            for object in self.obj_list:
+                points_file = '{}/ycb_models/{}/points.xyz'.format(cad_model_dir, object)
+                points = np.loadtxt(points_file).astype(np.float32)
+                points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
+                self.points_list.append(points)
+        else:
+            for object in self.obj_list:
+                points_file = '{}/tless_models/{}.pth'.format(cad_model_dir, object)
+                points = np.loadtxt(points_file).astype(np.float32) / 1000
+                points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
+                self.points_list.append(points)
+
+        # load sdf if need to refine
         if self.refine:
             # load the objects
             if self.obj_ctg == 'ycb':
@@ -224,20 +240,12 @@ class PoseRBPF:
                     sdf_torch, sdf_limits = load_sdf(sdf_file)
                     self.sdf_list.append(sdf_torch)
                     self.sdf_limits_list.append(sdf_limits)
-                    points_file = '{}/ycb_models/{}/points.xyz'.format(cad_model_dir, object)
-                    points = np.loadtxt(points_file).astype(np.float32)
-                    points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
-                    self.points_list.append(points)
             else:
                 for object in self.obj_list:
                     sdf_file = '{}/tless_models/{}.pth'.format(cad_model_dir, object)
                     sdf_torch, sdf_limits = load_sdf(sdf_file)
                     self.sdf_list.append(sdf_torch)
                     self.sdf_limits_list.append(sdf_limits)
-                    points_file = '{}/tless_models/{}.pth'.format(cad_model_dir, object)
-                    points = np.loadtxt(points_file).astype(np.float32) / 1000
-                    points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
-                    self.points_list.append(points)
             # define the optimizer
             self.sdf_refiner = sdf_optimizer(lr=0.005, use_gpu=True)
 
@@ -625,6 +633,35 @@ class PoseRBPF:
         self.rbpf.z_bar = z_star
         self.rbpf_init_max_sim = self.log_max_sim[-1]
 
+        # compute roi
+        pose = np.zeros((7,), dtype=np.float32)
+        pose[4:] = self.rbpf.trans_bar
+        pose[:4] = mat2quat(self.rbpf.rot_bar)
+        box = self.compute_box(pose)
+        self.rbpf.roi = np.zeros((1, 6), dtype=np.float32)
+        self.rbpf.roi[0, 1] = self.target_obj_idx
+        self.rbpf.roi[0, 2:6] = box
+
+
+    # compute bounding box by projection
+    def compute_box(self, pose):
+
+        x3d = np.transpose(self.points_list[self.target_obj_idx])
+        RT = np.zeros((3, 4), dtype=np.float32)
+        RT[:3, :3] = quat2mat(pose[:4])
+        RT[:, 3] = pose[4:]
+        x2d = np.matmul(self.intrinsics, np.matmul(RT, x3d))
+        x2d[0, :] = np.divide(x2d[0, :], x2d[2, :])
+        x2d[1, :] = np.divide(x2d[1, :], x2d[2, :])
+
+        x1 = np.min(x2d[0, :])
+        y1 = np.min(x2d[1, :])
+        x2 = np.max(x2d[0, :])
+        y2 = np.max(x2d[1, :])
+        box = np.array([x1, y1, x2, y2])
+        return box
+
+
     # evaluate particles according to the RGBD images
     def evaluate_particles_rgbd(self, image,
                            uv, z,
@@ -840,6 +877,13 @@ class PoseRBPF:
         # resample
         self.rbpf.resample_ddpf(self.rbpf_codepose, intrinsics, self.target_obj_cfg.PF)
 
+        # update roi
+        pose = np.zeros((7,), dtype=np.float32)
+        pose[4:] = self.rbpf.trans_bar
+        pose[:4] = mat2quat(self.rbpf.rot_bar)
+        box = self.compute_box(pose)
+        self.rbpf.roi[0, 2:6] = box
+
         # visualization
         self.est_bbox_weights = self.rbpf.weights
         self.est_bbox_center = self.rbpf.uv
@@ -880,6 +924,7 @@ class PoseRBPF:
                                       depth=depth)
 
                 if self.max_sim_rgb > 0.7 and self.max_sim_depth > 0.8 and not dry_run:
+                    print('===================is initialized!======================')
                     self.rbpf_ok_list[self.target_obj_idx] = True
             else:
                 self.process_poserbpf(image,

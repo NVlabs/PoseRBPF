@@ -25,6 +25,7 @@ from rospy.numpy_msg import numpy_msg
 import matplotlib.pyplot as plt
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
 from utils.nms import nms
+from utils.cython_bbox import bbox_overlaps
 
 from pose_rbpf.pose_rbpf import *
 import scipy.io
@@ -305,20 +306,61 @@ class ImageListener:
                 target_obj = self.pose_rbpf.obj_list[i]
                 self.pose_rbpf.propagate_with_forward_kinematics(target_obj)
 
-        # initialize the uninitialized but detected objects (initialize and refine)
-        obj_list_detected = []
-        obj_list_init = []
-        Tco_list_init = []
-        sim_list_init = []
-        for i in range(rois.shape[0]):
+        # collect rois from rbpfs
+        rois_rbpf = np.zeros((0, 6), dtype=np.float32)
+        index_rbpf = []
+        for i in range(len(self.pose_rbpf.obj_list)):
+            if self.pose_rbpf.rbpf_ok_list[i]:
+                roi = self.pose_rbpf.rbpf_list[i].roi
+                rois_rbpf = np.concatenate((rois_rbpf, roi), axis=0)
+                index_rbpf.append(i)
+                self.pose_rbpf.rbpf_list[i].roi_assign = None
+
+        # data association based on bounding box overlap
+        num_rois = rois.shape[0]
+        num_rbpfs = rois_rbpf.shape[0]
+        assigned_rois = np.zeros((num_rois, ), dtype=np.int32)
+        if num_rbpfs > 0 and num_rois > 0:
+            # overlaps: (rois x gt_boxes) (batch_id, x1, y1, x2, y2)
+            overlaps = bbox_overlaps(np.ascontiguousarray(rois_rbpf[:, (1, 2, 3, 4, 5)], dtype=np.float),
+                np.ascontiguousarray(rois[:, (1, 2, 3, 4, 5)], dtype=np.float))
+
+            # assign rois to rbpfs
+            assignment = overlaps.argmax(axis=1)
+            max_overlaps = overlaps.max(axis=1)
+            unassigned = []
+            for i in range(num_rbpfs):
+                if max_overlaps[i] > 0.2:
+                    self.pose_rbpf.rbpf_list[index_rbpf[i]].roi_assign = rois[assignment[i]]
+                    assigned_rois[assignment[i]] = 1
+                else:
+                    unassigned.append(i)
+
+            # check if there are un-assigned rois
+            index = np.where(assigned_rois == 0)[0]
+
+            # if there is un-assigned rbpfs
+            if len(unassigned) > 0 and len(index) > 0:
+                for i in range(len(unassigned)):
+                    for j in range(len(index)):
+                        if assigned_rois[index[j]] == 0 and self.pose_rbpf.rbpf_list[index_rbpf[unassigned[i]]].roi[1] == rois[index[j], 1]:
+                            self.pose_rbpf.rbpf_list[index_rbpf[unassigned[i]]].roi_assign = rois[index[j]]
+                            assigned_rois[index[j]] = 1
+        elif num_rbpfs == 0 and num_rois == 0:
+            return
+
+        # filter tracked objects
+        for i in range(len(self.pose_rbpf.obj_list)):
+            if self.pose_rbpf.rbpf_ok_list[i]:
+                target_obj = self.pose_rbpf.obj_list[i]
+                roi = self.pose_rbpf.rbpf_list[i].roi_assign
+                Tco, max_sim = self.pose_rbpf.pose_estimation_single(target_obj, roi, image_rgb, image_depth, visualize=False)
+
+        # initialize new object
+        for i in range(num_rois):
+            if assigned_rois[i]:
+                continue
             roi = rois[i]
             obj_idx = int(roi[1])
-            obj_list_detected.append(self.pose_rbpf.obj_list[obj_idx])
-
             target_obj = self.pose_rbpf.obj_list[obj_idx]
-
             Tco, max_sim = self.pose_rbpf.pose_estimation_single(target_obj, roi, image_rgb, image_depth, visualize=False)
-
-            Tco_list_init.append(Tco.copy())
-            obj_list_init.append(target_obj)
-            sim_list_init.append(max_sim)
