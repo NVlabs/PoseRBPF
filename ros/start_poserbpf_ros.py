@@ -14,7 +14,7 @@ import os.path as osp
 import numpy as np
 
 import rospy
-from ros.poserbpf_listener import ImageListener
+from poserbpf_listener import ImageListener
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
 import glob
 import copy
