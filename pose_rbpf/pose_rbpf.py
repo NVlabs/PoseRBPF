@@ -212,6 +212,7 @@ class PoseRBPF:
         self.sdf_list = []
         self.sdf_limits_list = []
         self.points_list = []
+        self.extents = np.zeros((len(self.obj_list), 3), dtype=np.float32)
         self.sdf_refiner = None
         self.target_sdf = None
         self.target_sdf_limits = None
@@ -219,15 +220,19 @@ class PoseRBPF:
 
         # load points
         if self.obj_ctg == 'ycb':
-            for object in self.obj_list:
+            for i in range(len(self.obj_list)):
+                object = self.obj_list[i]
                 points_file = '{}/ycb_models/{}/points.xyz'.format(cad_model_dir, object)
                 points = np.loadtxt(points_file).astype(np.float32)
+                self.extents[i, :] = 2 * np.max(np.absolute(points), axis=0)
                 points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
                 self.points_list.append(points)
         else:
-            for object in self.obj_list:
+            for i in range(len(self.obj_list)):
+                object = self.obj_list[i]
                 points_file = '{}/tless_models/{}.pth'.format(cad_model_dir, object)
                 points = np.loadtxt(points_file).astype(np.float32) / 1000
+                self.extents[i, :] = 2 * np.max(np.absolute(points), axis=0)
                 points = np.concatenate((points, np.ones((points.shape[0], 1), dtype=np.float32)), axis=1)
                 self.points_list.append(points)
 
@@ -637,16 +642,16 @@ class PoseRBPF:
         pose = np.zeros((7,), dtype=np.float32)
         pose[4:] = self.rbpf.trans_bar
         pose[:4] = mat2quat(self.rbpf.rot_bar)
-        box = self.compute_box(pose)
+        points = self.points_list[self.target_obj_idx]
+        box = self.compute_box(pose, points)
         self.rbpf.roi = np.zeros((1, 6), dtype=np.float32)
         self.rbpf.roi[0, 1] = self.target_obj_idx
         self.rbpf.roi[0, 2:6] = box
 
 
     # compute bounding box by projection
-    def compute_box(self, pose):
-
-        x3d = np.transpose(self.points_list[self.target_obj_idx])
+    def compute_box(self, pose, points):
+        x3d = np.transpose(points)
         RT = np.zeros((3, 4), dtype=np.float32)
         RT[:3, :3] = quat2mat(pose[:4])
         RT[:, 3] = pose[4:]
@@ -881,7 +886,8 @@ class PoseRBPF:
         pose = np.zeros((7,), dtype=np.float32)
         pose[4:] = self.rbpf.trans_bar
         pose[:4] = mat2quat(self.rbpf.rot_bar)
-        box = self.compute_box(pose)
+        points = self.points_list[self.target_obj_idx]
+        box = self.compute_box(pose, points)
         self.rbpf.roi[0, 2:6] = box
 
         # visualization
@@ -934,7 +940,7 @@ class PoseRBPF:
             if not dry_run:
                 print('Estimating {}, rgb sim = {}, depth sim = {}'.format(target_obj, self.max_sim_rgb, self.max_sim_depth))
                 if self.refine:
-                    self.pose_refine(depth.float(), 50)
+                    self.pose_refine_single(depth.float(), 50)
 
         if visualize:
             render_rgb, render_depth = self.renderer.render_pose(self.data_intrinsics,
@@ -955,7 +961,157 @@ class PoseRBPF:
         max_sim = self.log_max_sim[-1]
         return Tco, max_sim
 
-    def pose_refine(self, depth, steps, mask_input=None):
+
+    # run SDF pose refine for multiple objects at once
+    def pose_refine_multiple(self, sdf_optimizer, posecnn_classes, index_sdf, im_depth, im_pcloud, im_label=None, steps=10, visualize=False):
+
+        width = im_depth.shape[1]
+        height = im_depth.shape[0]
+        # compare the depth
+        depth_meas_roi = im_pcloud[:, :, 2]
+        mask_depth_meas = depth_meas_roi > 0
+        mask_depth_valid = torch.isfinite(depth_meas_roi)
+
+        # prepare data
+        num = len(index_sdf)
+        pose = np.zeros((7,), dtype=np.float32)
+        T_oc_init = np.zeros((num, 4, 4), dtype=np.float32)
+        cls_index = torch.cuda.FloatTensor(0, 1)
+        obj_index = torch.cuda.FloatTensor(0, 1)
+        pix_index = torch.cuda.LongTensor(0, 2)
+        for i in range(num):
+
+            # pose
+            ind = index_sdf[i]
+            pose[4:] = self.rbpf_list[ind].trans_bar
+            pose[:4] = mat2quat(self.rbpf_list[ind].rot_bar)
+
+            T_co = np.eye(4, dtype=np.float32)
+            T_co[:3, :3] = quat2mat(pose[:4])
+            T_co[:3, 3] = pose[4:]
+            T_oc_init[i] = np.linalg.inv(T_co)
+
+            # filter out points far away
+            z = float(pose[6])
+            roi = self.rbpf_list[ind].roi.flatten()
+            extent = 1.2 * np.mean(self.extents[int(roi[1]), :]) / 2
+            mask_distance = torch.abs(depth_meas_roi - z) < extent
+
+            # mask label
+            cls = int(roi[1])
+            w = roi[4] - roi[2]
+            h = roi[5] - roi[3]
+            x1 = max(int(roi[2] - w / 2), 0)
+            y1 = max(int(roi[3] - h / 2), 0)
+            x2 = min(int(roi[4] + w / 2), width - 1)
+            y2 = min(int(roi[5] + h / 2), height - 1)
+            if im_label is not None:
+                labels = torch.zeros_like(im_label)
+                labels[y1:y2, x1:x2] = im_label[y1:y2, x1:x2]
+                cls_train = posecnn_classes.index(self.obj_list[cls])
+                mask_label = labels == cls_train
+            else:
+                mask_label = torch.zeros_like(mask_depth_meas)
+                mask_label[y1:y2, x1:x2] = 1
+
+            mask = mask_label * mask_depth_meas * mask_depth_valid * mask_distance
+            index_p = torch.nonzero(mask)
+            n = index_p.shape[0]
+
+            if n > 100:
+                pix_index = torch.cat((pix_index, index_p), dim=0)
+                index = cls * torch.ones((n, 1), dtype=torch.float32, device=0)
+                cls_index = torch.cat((cls_index, index), dim=0)
+                index = i * torch.ones((n, 1), dtype=torch.float32, device=0)
+                obj_index = torch.cat((obj_index, index), dim=0)
+                print('sdf {} points for object {}, class {} {}'.format(n, i, cls, self.obj_list[cls]))
+            else:
+                print('sdf {} points for object {}, class {} {}, no refinement'.format(n, i, cls, self.obj_list[cls]))
+
+            if visualize and n <= 100:
+                fig = plt.figure()
+                ax = fig.add_subplot(2, 3, 1)
+                plt.imshow(mask_label.cpu().numpy())
+                ax.set_title('mask label')
+                ax = fig.add_subplot(2, 3, 2)
+                plt.imshow(mask_depth_meas.cpu().numpy())
+                ax.set_title('mask_depth_meas')
+                ax = fig.add_subplot(2, 3, 3)
+                plt.imshow(mask_depth_valid.cpu().numpy())
+                ax.set_title('mask_depth_valid')
+                ax = fig.add_subplot(2, 3, 4)
+                plt.imshow(mask_distance.cpu().numpy())
+                ax.set_title('mask_distance')
+                print(extent, z)
+                ax = fig.add_subplot(2, 3, 5)
+                plt.imshow(depth_meas_roi.cpu().numpy())
+                ax.set_title('depth')
+                plt.show()
+
+        # data
+        n = pix_index.shape[0]
+        print('sdf with {} points'.format(n))
+        if n == 0:
+            return
+        points = im_pcloud[pix_index[:, 0], pix_index[:, 1], :]
+        points = torch.cat((points, cls_index, obj_index), dim=1)
+        T_oc_opt = sdf_optimizer.refine_pose_layer(T_oc_init, points, steps=steps)
+
+        # update poses and bounding boxes
+        for i in range(num):
+            RT_opt = T_oc_opt[i]
+            if RT_opt[3, 3] > 0:
+                RT_opt = np.linalg.inv(RT_opt)
+                ind = index_sdf[i]
+                self.rbpf_list[ind].rot_bar = RT_opt[:3, :3]
+                self.rbpf_list[ind].trans_bar = RT_opt[:3, 3]
+                pose[:4] = mat2quat(RT_opt[:3, :3])
+                pose[4:] = RT_opt[:3, 3]
+                pc = self.points_list[int(self.rbpf_list[ind].roi[0, 1])]
+                self.rbpf_list[ind].roi[0, 2:6] = self.compute_box(pose, pc)
+
+        if visualize:
+
+            points = points.cpu().numpy()
+            for i in range(num):
+
+                ind = index_sdf[i]
+                roi = self.rbpf_list[ind].roi.flatten()
+                cls = int(roi[1])
+                T_co_init = np.linalg.inv(T_oc_init[i])
+
+                T_co_opt = np.eye(4, dtype=np.float32)
+                T_co_opt[:3, :3] = self.rbpf_list[ind].rot_bar
+                T_co_opt[:3, 3] = self.rbpf_list[ind].trans_bar
+
+                index = np.where(points[:, 4] == i)[0]
+                if len(index) == 0:
+                    continue
+                pts = points[index, :4].copy()
+                pts[:, 3] = 1.0
+
+                # show points
+                fig = plt.figure()
+                ax = fig.add_subplot(1, 1, 1, projection='3d')
+                points_obj = self.points_list[cls]
+                points_init = np.matmul(np.linalg.inv(T_co_init), pts.transpose()).transpose()
+                points_opt = np.matmul(np.linalg.inv(T_co_opt), pts.transpose()).transpose()
+
+                ax.scatter(points_obj[::5, 0], points_obj[::5, 1], points_obj[::5, 2], color='yellow')
+                ax.scatter(points_init[::5, 0], points_init[::5, 1], points_init[::5, 2], color='red')
+                ax.scatter(points_opt[::5, 0], points_opt[::5, 1], points_opt[::5, 2], color='blue')
+
+                ax.set_xlabel('X Label')
+                ax.set_ylabel('Y Label')
+                ax.set_zlabel('Z Label')
+                ax.set_xlim(sdf_optimizer.xmins[cls], sdf_optimizer.xmaxs[cls])
+                ax.set_ylim(sdf_optimizer.ymins[cls], sdf_optimizer.ymaxs[cls])
+                ax.set_zlim(sdf_optimizer.zmins[cls], sdf_optimizer.zmaxs[cls])
+                ax.set_title(self.obj_list[cls])
+                plt.show()
+
+
+    def pose_refine_single(self, depth, steps, mask_input=None):
         T_co_init = np.eye(4, dtype=np.float32)
         T_co_init[:3, :3] = self.rbpf.rot_bar
         T_co_init[:3, 3] = self.rbpf.trans_bar

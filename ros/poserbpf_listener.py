@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import threading
 import sys
+import posecnn_cuda
 
 from Queue import Queue
 from cv_bridge import CvBridge, CvBridgeError
@@ -28,6 +29,7 @@ from utils.nms import nms
 from utils.cython_bbox import bbox_overlaps
 
 from pose_rbpf.pose_rbpf import *
+from pose_rbpf.sdf_multiple_optimizer import sdf_multiple_optimizer
 import scipy.io
 from scipy.spatial import distance_matrix as scipy_distance_matrix
 import random
@@ -53,7 +55,7 @@ def ros_qt_to_rt(rot, trans):
 class ImageListener:
 
     def __init__(self, object_list, cfg_list, checkpoint_list, codebook_list,
-                 modality, cad_model_dir, category='ycb', refine=True):
+                 modality, cad_model_dir, category='ycb', refine_single=True, refine_multiple=False):
 
         print(' *** Initializing PoseRBPF ROS Node ... ')
 
@@ -69,6 +71,11 @@ class ImageListener:
         self.queue_size = 10
         self.scene = 1
 
+        self.posecnn_classes = ('__background__', '002_master_chef_can', '003_cracker_box', '004_sugar_box', '005_tomato_soup_can', \
+                         '006_mustard_bottle', '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', \
+                         '011_banana', '019_pitcher_base', '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', \
+                         '036_wood_block', '037_scissors', '040_large_marker', '052_extra_large_clamp', '061_foam_brick')
+
         # initialize poserbpf with cfg_file
         self.object_list = object_list
         self.cfg_list = cfg_list
@@ -77,7 +84,19 @@ class ImageListener:
 
         self.pose_rbpf = PoseRBPF(self.object_list, self.cfg_list, self.ckpt_list,
                                   self.codebook_list, category,
-                                  modality, cad_model_dir, refine=refine)
+                                  modality, cad_model_dir, refine=refine_single)
+
+        # initial sdf refinement for multiple objects at once
+        self.refine_multiple = refine_multiple
+        if refine_multiple:
+            print('loading SDFs')
+            sdf_files = []
+            for cls in self.object_list:
+                sdf_file = '{}/ycb_models/{}/textured_simple_low_res.pth'.format(cad_model_dir, cls)
+                sdf_files.append(sdf_file)
+            reg_trans = 1000.0
+            reg_rot = 10.0
+            self.sdf_optimizer = sdf_multiple_optimizer(self.object_list, sdf_files, reg_trans, reg_rot)
 
         # target list
         self.target_list = range(len(self.pose_rbpf.obj_list))
@@ -129,10 +148,12 @@ class ImageListener:
         # subscriber for rgbd images and joint states
         rgb_sub = message_filters.Subscriber('/camera/color/image_raw', ROS_Image, queue_size=1)
         depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', ROS_Image, queue_size=1)
-        queue_size = 1
-        slop_seconds = 0.01
+        # subscriber for posecnn label
+        label_sub = message_filters.Subscriber('/posecnn_label', ROS_Image, queue_size=1)
+        queue_size = 10
+        slop_seconds = 0.2
         ts = message_filters.ApproximateTimeSynchronizer(
-            [rgb_sub, depth_sub], queue_size, slop_seconds)
+            [rgb_sub, depth_sub, label_sub], queue_size, slop_seconds)
         ts.registerCallback(self.callback)
 
     def visualize_poses(self, rgb):
@@ -210,12 +231,36 @@ class ImageListener:
         return rois_est
 
 
+    def callback(self, rgb, depth, label):
+        # decode image
+        if depth is not None:
+            if depth.encoding == '32FC1':
+                depth_cv = self.cv_bridge.imgmsg_to_cv2(depth)
+            elif depth.encoding == '16UC1':
+                depth_cv = self.cv_bridge.imgmsg_to_cv2(depth)
+            else:
+                rospy.logerr_throttle(1,
+                                      'Unsupported depth type. Expected 16UC1 or 32FC1, got {}'.format(depth.encoding))
+                return
+        else:
+            depth_cv = None
+        with lock:
+            self.input_depth = depth_cv
+            # rgb image used for posecnn detection
+            self.input_rgb = self.cv_bridge.imgmsg_to_cv2(rgb, 'rgb8')
+            self.input_seg = self.cv_bridge.imgmsg_to_cv2(label, 'mono8')
+            # other information
+            self.input_stamp = rgb.header.stamp
+            self.input_frame_id = rgb.header.frame_id
+
+
     def process_data(self):
         # callback data
         with lock:
             input_stamp = self.input_stamp
             input_rgb = self.input_rgb.copy()
             input_depth = self.input_depth.copy()
+            input_seg = self.input_seg.copy()
 
         # subscribe the transformation
         try:
@@ -250,7 +295,7 @@ class ImageListener:
         rois = rois[:, :6]
 
         # call pose estimation function
-        self.pose_estimation(input_rgb, input_depth, rois)
+        self.pose_estimation(input_rgb, input_depth, input_seg, rois)
 
         for idx_tf in range(len(self.pose_rbpf.rbpf_list)):
             if not self.pose_rbpf.rbpf_ok_list[idx_tf]:
@@ -275,30 +320,20 @@ class ImageListener:
         pose_msg.encoding = 'rgb8'
         self.pose_pub.publish(pose_msg)
 
-    def callback(self, rgb, depth):
-        # decode image
-        if depth is not None:
-            if depth.encoding == '32FC1':
-                depth_cv = self.cv_bridge.imgmsg_to_cv2(depth)
-            elif depth.encoding == '16UC1':
-                depth_cv = self.cv_bridge.imgmsg_to_cv2(depth)
-            else:
-                rospy.logerr_throttle(1,
-                                      'Unsupported depth type. Expected 16UC1 or 32FC1, got {}'.format(depth.encoding))
-                return
-        else:
-            depth_cv = None
-        with lock:
-            self.input_depth = depth_cv
-            # rgb image used for posecnn detection
-            self.input_rgb = self.cv_bridge.imgmsg_to_cv2(rgb, 'rgb8')
-            # other information
-            self.input_stamp = rgb.header.stamp
-            self.input_frame_id = rgb.header.frame_id
 
-    def pose_estimation(self, rgb, depth, rois):
+    def pose_estimation(self, rgb, depth, label, rois):
         image_rgb = torch.from_numpy(rgb).float() / 255.0
-        image_depth = torch.from_numpy(depth.astype(np.float32)).unsqueeze(2).float() / 1000.0
+        image_depth = torch.from_numpy(depth.astype(np.float32)).float() / 1000.0
+        im_depth = image_depth.cuda()
+        image_depth = image_depth.unsqueeze(2)
+        im_label = torch.from_numpy(label).cuda()
+
+        # backproject depth
+        fx = self.intrinsic_matrix[0, 0]
+        fy = self.intrinsic_matrix[1, 1]
+        px = self.intrinsic_matrix[0, 2]
+        py = self.intrinsic_matrix[1, 2]
+        im_pcloud = posecnn_cuda.backproject_forward(fx, fy, px, py, im_depth)[0]
 
         # propagate particles for all the initialized objects
         for i in range(len(self.pose_rbpf.obj_list)):
@@ -343,7 +378,7 @@ class ImageListener:
             if len(unassigned) > 0 and len(index) > 0:
                 for i in range(len(unassigned)):
                     for j in range(len(index)):
-                        if assigned_rois[index[j]] == 0 and self.pose_rbpf.rbpf_list[index_rbpf[unassigned[i]]].roi[1] == rois[index[j], 1]:
+                        if assigned_rois[index[j]] == 0 and self.pose_rbpf.rbpf_list[index_rbpf[unassigned[i]]].roi[0, 1] == rois[index[j], 1]:
                             self.pose_rbpf.rbpf_list[index_rbpf[unassigned[i]]].roi_assign = rois[index[j]]
                             assigned_rois[index[j]] = 1
         elif num_rbpfs == 0 and num_rois == 0:
@@ -364,3 +399,12 @@ class ImageListener:
             obj_idx = int(roi[1])
             target_obj = self.pose_rbpf.obj_list[obj_idx]
             Tco, max_sim = self.pose_rbpf.pose_estimation_single(target_obj, roi, image_rgb, image_depth, visualize=False)
+
+        # SDF refinement for multiple objects
+        if self.refine_multiple:
+            index_sdf = []
+            for i in range(len(self.pose_rbpf.obj_list)):
+                if self.pose_rbpf.rbpf_ok_list[i]:
+                    index_sdf.append(i)
+            if len(index_sdf) > 0:
+                self.pose_rbpf.pose_refine_multiple(self.sdf_optimizer, self.posecnn_classes, index_sdf, im_depth, im_pcloud, im_label, steps=50)
