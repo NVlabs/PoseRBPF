@@ -25,6 +25,7 @@ import rospy
 import matplotlib.pyplot as plt
 import copy
 import posecnn_cuda
+import _init_paths
 import networks
 
 from cv_bridge import CvBridge, CvBridgeError
