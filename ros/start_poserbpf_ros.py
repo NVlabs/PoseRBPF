@@ -12,7 +12,7 @@ import pprint
 import time, os, sys
 import os.path as osp
 import numpy as np
-
+import _init_paths
 import rospy
 from poserbpf_listener import ImageListener
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
