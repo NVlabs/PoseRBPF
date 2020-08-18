@@ -186,8 +186,8 @@ __C.PF.ROT_RANGE = 0.2
 __C.PF.ROT_GAUSSIAN_KERNEL_SZ = 5
 __C.PF.ROT_GAUSSIAN_KERNEL_STD = 1
 __C.PF.ROT_VAR = 0.05
-__C.PF.SIM_RGB_THRES = 0.8
-__C.PF.SIM_DEPTH_THRES = 0.85
+__C.PF.SIM_RGB_THRES = 0.75
+__C.PF.SIM_DEPTH_THRES = 0.8
 
 def get_output_dir(imdb, net):
     """Return the directory where experimental artifacts are placed.
