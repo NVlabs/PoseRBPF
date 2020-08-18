@@ -39,6 +39,7 @@ class PoseRBPF:
         self.aae_list = []
         self.codebook_list = []
         self.codebook_list_depth = []
+        self.instance_list = []
         self.rbpf_list = []
         self.rbpf_ok_list = []
 
@@ -87,9 +88,9 @@ class PoseRBPF:
                     self.codebook_list_depth.append(torch.load(codebook_file)[2])
 
             self.rbpf_codepose = torch.load(codebook_file)[1].cpu().numpy()  # all are identical
-            idx_obj = self.obj_list.index(obj)
-            self.rbpf_list.append(particle_filter(self.cfg_list[idx_obj].PF, n_particles=self.cfg_list[idx_obj].PF.N_PROCESS))
-            self.rbpf_ok_list.append(False)
+            # idx_obj = self.obj_list.index(obj)
+            # self.rbpf_list.append(particle_filter(self.cfg_list[idx_obj].PF, n_particles=self.cfg_list[idx_obj].PF.N_PROCESS))
+            # self.rbpf_ok_list.append(False)
 
         # renderer
         self.intrinsics = np.array([[self.cfg_list[0].PF.FU, 0, self.cfg_list[0].PF.U0],
@@ -186,9 +187,9 @@ class PoseRBPF:
         # multiple object pose estimation (mope)
         self.mope_Tbo_list = []
         self.mope_pc_b_list = []
-        for i in range(len(self.rbpf_list)):
-            self.mope_Tbo_list.append(np.eye(4, dtype=np.float32))
-            self.mope_pc_b_list.append(None)
+        # for i in range(len(self.rbpf_list)):
+        #     self.mope_Tbo_list.append(np.eye(4, dtype=np.float32))
+        #     self.mope_pc_b_list.append(None)
 
         # evaluation module
         self.cos_sim = nn.CosineSimilarity(dim=1, eps=1e-6)
@@ -254,9 +255,22 @@ class PoseRBPF:
             # define the optimizer
             self.sdf_refiner = sdf_optimizer(lr=0.005, use_gpu=True)
 
+    # add object instance
+    def add_object_instance(self, object_name):
+        assert object_name in self.obj_list, "object {} is not in the list of test objects".format(
+            object_name)
+        idx_obj = self.obj_list.index(object_name)
+        self.rbpf_list.append(particle_filter(self.cfg_list[idx_obj].PF, n_particles=self.cfg_list[idx_obj].PF.N_PROCESS))
+        self.rbpf_ok_list.append(False)
+        self.instance_list.append(object_name)
+        self.mope_Tbo_list.append(np.eye(4, dtype=np.float32))
+        self.mope_pc_b_list.append(None)
+
     # specify the target object for tracking
-    def set_target_obj(self, target_object):
+    def set_target_obj(self, target_instance_idx):
+        target_object = self.instance_list[target_instance_idx]
         assert target_object in self.obj_list, "target object {} is not in the list of test objects".format(target_object)
+
         # set target object property
         self.target_obj = target_object
         self.target_obj_idx = self.obj_list.index(target_object)
@@ -276,8 +290,8 @@ class PoseRBPF:
         self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
 
         # reset particle filter
-        self.rbpf = self.rbpf_list[self.target_obj_idx]
-        self.rbpf_ok = self.rbpf_ok_list[self.target_obj_idx]
+        self.rbpf = self.rbpf_list[target_instance_idx]
+        self.rbpf_ok = self.rbpf_ok_list[target_instance_idx]
         self.rbpf_init_max_sim = 0
 
         if self.refine:
@@ -327,7 +341,9 @@ class PoseRBPF:
         # print
         print('target object is set to {}'.format(self.target_obj_cfg.PF.TRACK_OBJ))
 
-    def switch_target_obj(self, target_object):
+    def switch_target_obj(self, target_instance_idx):
+        target_object = self.instance_list[target_instance_idx]
+
         # set target object property
         self.target_obj = target_object
         self.target_obj_idx = self.obj_list.index(target_object)
@@ -347,8 +363,8 @@ class PoseRBPF:
         self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
 
         # reset particle filter
-        self.rbpf = self.rbpf_list[self.target_obj_idx]
-        self.rbpf_ok = self.rbpf_ok_list[self.target_obj_idx]
+        self.rbpf = self.rbpf_list[target_instance_idx]
+        self.rbpf_ok = self.rbpf_ok_list[target_instance_idx]
         self.rbpf_init_max_sim = 0
 
         if self.refine:
@@ -897,15 +913,15 @@ class PoseRBPF:
 
         return 0
 
-    def propagate_with_forward_kinematics(self, target_obj):
-        self.switch_target_obj(target_obj)
+    def propagate_with_forward_kinematics(self, target_instance_idx):
+        self.switch_target_obj(target_instance_idx)
         self.rbpf.propagate_particles(self.T_c1c0, self.T_o0o1, 0, 0, torch.from_numpy(self.intrinsics).unsqueeze(0))
 
     # function used in ros node
-    def pose_estimation_single(self, target_obj, roi, image, depth, visualize=False, dry_run=False):
+    def pose_estimation_single(self, target_instance_idx, roi, image, depth, visualize=False, dry_run=False):
 
         # set target object
-        self.switch_target_obj(target_obj)
+        self.switch_target_obj(target_instance_idx)
 
         if not roi is None:
             center = np.array([0.5 * (roi[2] + roi[4]), 0.5 * (roi[3] + roi[5]), 1], dtype=np.float32)
@@ -920,7 +936,7 @@ class PoseRBPF:
 
             self.prior_uv = center
 
-            if self.rbpf_ok_list[self.target_obj_idx] == False:
+            if self.rbpf_ok_list[target_instance_idx] == False:
                 # sample around the center of bounding box
                 self.initialize_poserbpf(image, self.intrinsics,
                                        self.prior_uv[:2], 100, depth=depth)
@@ -929,16 +945,17 @@ class PoseRBPF:
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
                                       depth=depth)
 
-                if self.max_sim_rgb > 0.7 and self.max_sim_depth > 0.8 and not dry_run:
+                if self.max_sim_rgb > self.target_obj_cfg.PF.SIM_RGB_THRES \
+                        and self.max_sim_depth > self.target_obj_cfg.PF.SIM_DEPTH_THRES and not dry_run:
                     print('===================is initialized!======================')
-                    self.rbpf_ok_list[self.target_obj_idx] = True
+                    self.rbpf_ok_list[target_instance_idx] = True
             else:
                 self.process_poserbpf(image,
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
                                       depth=depth)
 
             if not dry_run:
-                print('Estimating {}, rgb sim = {}, depth sim = {}'.format(target_obj, self.max_sim_rgb, self.max_sim_depth))
+                print('Estimating {}, rgb sim = {}, depth sim = {}'.format(self.instance_list[target_instance_idx], self.max_sim_rgb, self.max_sim_depth))
                 if self.refine:
                     self.pose_refine_single(depth.float(), 50)
 

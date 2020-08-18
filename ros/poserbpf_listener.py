@@ -101,7 +101,8 @@ class ImageListener:
         # target list
         self.target_list = range(len(self.pose_rbpf.obj_list))
         self.target_object = cfg.TEST.OBJECTS[0]
-        self.target_cfg = self.pose_rbpf.set_target_obj(self.target_object)
+        self.pose_rbpf.add_object_instance(self.target_object)
+        self.target_cfg = self.pose_rbpf.set_target_obj(0)
         self.class_info = torch.ones((1, 1, 128, 128), dtype=torch.float32)
         self.init_failure_steps = 0
         self.input_rgb = None
@@ -167,7 +168,7 @@ class ImageListener:
                 Tco[:3, 3] = self.pose_rbpf.rbpf_list[i].trans_bar
 
                 Tco_list.append(Tco.copy())
-                object_initialized.append(i)
+                object_initialized.append(self.pose_rbpf.obj_list.index(self.pose_rbpf.instance_list[i]))
 
         image_est_render, _, _ = self.pose_rbpf.renderer.render_pose_multiple(self.intrinsic_matrix,
                                                                                Tco_list,
@@ -180,10 +181,15 @@ class ImageListener:
     def run_poserbpf_initial(self):
         image_rgb = torch.zeros((640, 480, 3), dtype=torch.float32)
         image_depth = torch.zeros((640, 480, 1), dtype=torch.float32)
-        target_obj = self.pose_rbpf.obj_list[0]
         roi = np.array([0, 0, 0, 0, 0, 0], dtype=np.float32)
-        self.pose_rbpf.set_target_obj(target_obj)
-        self.pose_rbpf.pose_estimation_single(target_obj, roi, image_rgb, image_depth, dry_run=True)
+        self.pose_rbpf.set_target_obj(0)
+        self.pose_rbpf.pose_estimation_single(0, roi, image_rgb, image_depth, dry_run=True)
+        # reset lists
+        self.pose_rbpf.rbpf_list = []
+        self.pose_rbpf.rbpf_ok_list = []
+        self.pose_rbpf.instance_list = []
+        self.pose_rbpf.mope_Tbo_list = []
+        self.pose_rbpf.mope_pc_b_list = []
 
 
     def query_posecnn_detection(self, classes):
@@ -307,8 +313,13 @@ class ImageListener:
             # publish tf
             t_bo = Tbo[:3, 3]
             q_bo = mat2quat(Tbo[:3, :3])
+            instance_count = 0
+            for i in range(idx_tf):
+                if self.pose_rbpf.instance_list[i] == self.pose_rbpf.instance_list[idx_tf]:
+                    instance_count += 1
             self.br.sendTransform(t_bo, [q_bo[1], q_bo[2], q_bo[3], q_bo[0]], self.input_stamp,
-                                  'poserbpf/' + self.pose_rbpf.obj_list[idx_tf], 'measured/base_link')
+                                  'poserbpf/{}_{}'.format(self.pose_rbpf.instance_list[idx_tf],
+                                                          instance_count), 'measured/base_link')
 
         # visualization
         image_disp = self.visualize_poses(input_rgb) * 255.0
@@ -336,15 +347,14 @@ class ImageListener:
         im_pcloud = posecnn_cuda.backproject_forward(fx, fy, px, py, im_depth)[0]
 
         # propagate particles for all the initialized objects
-        for i in range(len(self.pose_rbpf.obj_list)):
+        for i in range(len(self.pose_rbpf.instance_list)):
             if self.pose_rbpf.rbpf_ok_list[i]:
-                target_obj = self.pose_rbpf.obj_list[i]
-                self.pose_rbpf.propagate_with_forward_kinematics(target_obj)
+                self.pose_rbpf.propagate_with_forward_kinematics(i)
 
         # collect rois from rbpfs
         rois_rbpf = np.zeros((0, 6), dtype=np.float32)
         index_rbpf = []
-        for i in range(len(self.pose_rbpf.obj_list)):
+        for i in range(len(self.pose_rbpf.instance_list)):
             if self.pose_rbpf.rbpf_ok_list[i]:
                 roi = self.pose_rbpf.rbpf_list[i].roi
                 rois_rbpf = np.concatenate((rois_rbpf, roi), axis=0)
@@ -385,11 +395,10 @@ class ImageListener:
             return
 
         # filter tracked objects
-        for i in range(len(self.pose_rbpf.obj_list)):
+        for i in range(len(self.pose_rbpf.instance_list)):
             if self.pose_rbpf.rbpf_ok_list[i]:
-                target_obj = self.pose_rbpf.obj_list[i]
                 roi = self.pose_rbpf.rbpf_list[i].roi_assign
-                Tco, max_sim = self.pose_rbpf.pose_estimation_single(target_obj, roi, image_rgb, image_depth, visualize=False)
+                Tco, max_sim = self.pose_rbpf.pose_estimation_single(i, roi, image_rgb, image_depth, visualize=False)
 
         # initialize new object
         for i in range(num_rois):
@@ -398,12 +407,14 @@ class ImageListener:
             roi = rois[i]
             obj_idx = int(roi[1])
             target_obj = self.pose_rbpf.obj_list[obj_idx]
-            Tco, max_sim = self.pose_rbpf.pose_estimation_single(target_obj, roi, image_rgb, image_depth, visualize=False)
+            self.pose_rbpf.add_object_instance(target_obj)
+            Tco, max_sim = self.pose_rbpf.pose_estimation_single(len(self.pose_rbpf.instance_list)-1, roi, image_rgb,
+                                                                 image_depth, visualize=False)
 
         # SDF refinement for multiple objects
         if self.refine_multiple:
             index_sdf = []
-            for i in range(len(self.pose_rbpf.obj_list)):
+            for i in range(len(self.pose_rbpf.instance_list)):
                 if self.pose_rbpf.rbpf_ok_list[i]:
                     index_sdf.append(i)
             if len(index_sdf) > 0:

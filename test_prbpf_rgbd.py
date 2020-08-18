@@ -109,7 +109,8 @@ if __name__ == '__main__':
     pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, object_category, modality='rgbd', cad_model_dir=args.cad_dir)
 
     target_obj = cfg.TEST.OBJECTS[0]
-    target_cfg = pose_rbpf.set_target_obj(target_obj)
+    pose_rbpf.add_object_instance(target_obj)
+    target_cfg = pose_rbpf.set_target_obj(0)
 
     # test the system on ycb or tless datasets
     if args.dataset_name == 'ycb_video':
