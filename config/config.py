@@ -156,7 +156,7 @@ __C.PF.RENDER_FULL = False
 __C.PF.INIT_GLOBALLY = False
 __C.PF.DEPTH_DELTA = 0.03
 __C.PF.DEPTH_TAU = 0.03
-__C.PF.DEPTH_STD = 0.15
+__C.PF.DEPTH_STD = 0.1
 __C.PF.UV_NOISE = 5.0
 __C.PF.Z_NOISE = 0.05
 __C.PF.UV_NOISE_PRIOR = 5.0
@@ -187,7 +187,8 @@ __C.PF.ROT_GAUSSIAN_KERNEL_SZ = 5
 __C.PF.ROT_GAUSSIAN_KERNEL_STD = 1
 __C.PF.ROT_VAR = 0.05
 __C.PF.SIM_RGB_THRES = 0.75
-__C.PF.SIM_DEPTH_THRES = 0.8
+__C.PF.SIM_DEPTH_THRES = 0.7
+__C.PF.FUSION_WT_RGB = 0.6
 
 def get_output_dir(imdb, net):
     """Return the directory where experimental artifacts are placed.

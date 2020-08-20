@@ -495,6 +495,9 @@ class PoseRBPF:
 
         print('     step {}/{}: translation error (filter)   = {:.4f} cm'.format(step+1, int(steps),
                                                                                 filter_trans_error_bar * 100))
+        print('     step {}/{}: RGB Similarity   = {:.3f}'.format(step + 1, int(steps), self.max_sim_rgb))
+        if self.modality == 'rgbd':
+            print('     step {}/{}: Depth Similarity   = {:.3f}'.format(step + 1, int(steps), self.max_sim_depth))
         print('     step {}/{}: uvz error (filter)           = ({:.4f}, {:.4f}, {:.4f})'.format(step + 1, int(steps),
                                                                                                  self.rbpf.uv_bar[0] - self.gt_uv[0],
                                                                                                  self.rbpf.uv_bar[1] - self.gt_uv[1],
@@ -750,16 +753,17 @@ class PoseRBPF:
         cosine_distance_matrix_depth = self.aae_full.compute_distance_matrix(codes_depth,
                                                                              self.target_obj_codebook_depth)
         cosine_distance_matrix_rgb = self.aae_full.compute_distance_matrix(codes, self.target_obj_codebook)
-        max_rgb = torch.max(cosine_distance_matrix_rgb)
-        max_depth = torch.max(cosine_distance_matrix_depth)
-        self.max_sim_rgb = max_rgb.cpu().numpy()
-        self.max_sim_depth = max_depth.cpu().numpy()
 
-        cosine_distance_matrix = cosine_distance_matrix_rgb * 0.5 + cosine_distance_matrix_depth * 0.5
+        cosine_distance_matrix = cosine_distance_matrix_rgb * self.target_obj_cfg.PF.FUSION_WT_RGB\
+                                 + cosine_distance_matrix_depth * (1 - self.target_obj_cfg.PF.FUSION_WT_RGB)
 
         # get the maximum similarity for each particle
         v_sims, i_sims = torch.max(cosine_distance_matrix, dim=1)
         self.cos_dist_mat = v_sims
+
+        _, j_sim = torch.max(v_sims, dim=0)
+        self.max_sim_rgb = cosine_distance_matrix_rgb[j_sim, i_sims[j_sim]].cpu().numpy()
+        self.max_sim_depth = cosine_distance_matrix_depth[j_sim, i_sims[j_sim]].cpu().numpy()
 
         # evaluate particles with depth images
         depth_scores = torch.from_numpy(np.ones_like(z)).cuda().float()
@@ -941,18 +945,19 @@ class PoseRBPF:
                 self.initialize_poserbpf(image, self.intrinsics,
                                        self.prior_uv[:2], 100, depth=depth)
 
-                self.process_poserbpf(image,
+                if self.max_sim_rgb > self.target_obj_cfg.PF.SIM_RGB_THRES and not dry_run:
+                    print('===================is initialized!======================')
+                    self.rbpf_ok_list[target_instance_idx] = True
+                    self.process_poserbpf(image,
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
                                       depth=depth)
 
-                if self.max_sim_rgb > self.target_obj_cfg.PF.SIM_RGB_THRES \
-                        and self.max_sim_depth > self.target_obj_cfg.PF.SIM_DEPTH_THRES and not dry_run:
-                    print('===================is initialized!======================')
-                    self.rbpf_ok_list[target_instance_idx] = True
             else:
                 self.process_poserbpf(image,
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
                                       depth=depth)
+                if self.log_max_sim[-1] < 0.6:
+                    self.rbpf_ok_list[target_instance_idx] = False
 
             if not dry_run:
                 print('Estimating {}, rgb sim = {}, depth sim = {}'.format(self.instance_list[target_instance_idx], self.max_sim_rgb, self.max_sim_depth))
@@ -1282,6 +1287,10 @@ class PoseRBPF:
 
                 self.rbpf_ok = True
 
+                # to avoid initialization to symmetric view and cause abnormal ADD results
+                if self.obj_ctg == 'ycb' and init_rot_error * 57.3 > 60:
+                    self.rbpf_ok = False
+
             # filtering
             if self.rbpf_ok:
                 torch.cuda.synchronize()
@@ -1324,10 +1333,6 @@ class PoseRBPF:
                         image_disp = 0.4 * image_disp + 0.6 * image_est_disp
                         self.visualize_roi(image_disp, self.rbpf.uv, self.rbpf.z, step, error=False, uncertainty=self.show_prior)
                         plt.close()
-
-                # to avoid initialization to symmetric view and cause abnormal ADD results
-                if self.obj_ctg == 'ycb' and init_rot_error * 57.3 > 50:
-                    self.rbpf_ok = False
 
             if step == steps-1:
                 break

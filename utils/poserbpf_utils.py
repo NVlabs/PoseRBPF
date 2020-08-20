@@ -39,8 +39,9 @@ def GaussianKernel3D(kernlen=3, nsig=1):
 
 # pytorch argmax is slow
 def my_arg_max(input):
-    index = (input == torch.max(input)).nonzero().detach()
-    return index[0]
+    v_sims, i_sims = torch.max(input, dim=1)
+    _, j_sim = torch.max(v_sims, dim=0)
+    return [j_sim, i_sims[j_sim]]
 
 def weight_computation(distance, var=0.05):
     distance_max = np.max(distance)

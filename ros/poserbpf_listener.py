@@ -407,9 +407,17 @@ class ImageListener:
             roi = rois[i]
             obj_idx = int(roi[1])
             target_obj = self.pose_rbpf.obj_list[obj_idx]
-            self.pose_rbpf.add_object_instance(target_obj)
-            Tco, max_sim = self.pose_rbpf.pose_estimation_single(len(self.pose_rbpf.instance_list)-1, roi, image_rgb,
-                                                                 image_depth, visualize=False)
+            add_new_instance = True
+            for j in range(len(self.pose_rbpf.instance_list)):
+                if self.pose_rbpf.instance_list[j] == target_obj and self.pose_rbpf.rbpf_ok_list[j] == False:
+                    add_new_instance = False
+                    Tco, max_sim = self.pose_rbpf.pose_estimation_single(j, roi,
+                                                                         image_rgb,
+                                                                         image_depth, visualize=False)
+            if add_new_instance:
+                self.pose_rbpf.add_object_instance(target_obj)
+                Tco, max_sim = self.pose_rbpf.pose_estimation_single(len(self.pose_rbpf.instance_list)-1, roi, image_rgb,
+                                                                     image_depth, visualize=False)
 
         # SDF refinement for multiple objects
         if self.refine_multiple:
