@@ -123,9 +123,14 @@ rosdep update
 ./scripts/run_ros_demo_posecnn.sh
 ```
 
-- Run PoseRBPF node (with roscore running in another terminal):
+- Run PoseRBPF node for RGB-D tracking (with roscore running in another terminal):
 ```angular2html
 ./scripts/run_ros_demo.sh
+```
+
+- (Optional) For RGB tracking run this command instead:
+```angular2html
+./scripts/run_ros_demo_rgb.sh
 ```
 
 - Run RVIZ in the PoseRBPF directory:
@@ -153,9 +158,14 @@ rosbag play ./ros_data/demo_single.bag
 ./scripts/run_ros_demo_posecnn.sh
 ```
 
-- Run PoseRBPF node (with roscore running in another terminal):
+- Run PoseRBPF node for RGB-D tracking (with roscore running in another terminal):
 ```angular2html
 ./scripts/run_ros_demo_multiple.sh
+```
+
+- (Optional) For RGB tracking run this command instead:
+```angular2html
+./scripts/run_ros_demo_rgb_multiple.sh
 ```
 
 - Run RVIZ in the PoseRBPF directory:

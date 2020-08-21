@@ -55,7 +55,7 @@ def ros_qt_to_rt(rot, trans):
 class ImageListener:
 
     def __init__(self, object_list, cfg_list, checkpoint_list, codebook_list,
-                 modality, cad_model_dir, category='ycb', refine_single=True, refine_multiple=False):
+                 modality, cad_model_dir, category='ycb', refine_single=True, refine_multiple=False, use_depth=True):
 
         print(' *** Initializing PoseRBPF ROS Node ... ')
 
@@ -70,6 +70,7 @@ class ImageListener:
         self.num_lost = 50
         self.queue_size = 10
         self.scene = 1
+        self.use_depth = use_depth
 
         self.posecnn_classes = ('__background__', '002_master_chef_can', '003_cracker_box', '004_sugar_box', '005_tomato_soup_can', \
                          '006_mustard_bottle', '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', \
@@ -339,12 +340,8 @@ class ImageListener:
         image_depth = image_depth.unsqueeze(2)
         im_label = torch.from_numpy(label).cuda()
 
-        # backproject depth
-        fx = self.intrinsic_matrix[0, 0]
-        fy = self.intrinsic_matrix[1, 1]
-        px = self.intrinsic_matrix[0, 2]
-        py = self.intrinsic_matrix[1, 2]
-        im_pcloud = posecnn_cuda.backproject_forward(fx, fy, px, py, im_depth)[0]
+        if not self.use_depth:
+            image_depth = None
 
         # propagate particles for all the initialized objects
         for i in range(len(self.pose_rbpf.instance_list)):
@@ -420,7 +417,14 @@ class ImageListener:
                                                                      image_depth, visualize=False)
 
         # SDF refinement for multiple objects
-        if self.refine_multiple:
+        if self.refine_multiple and self.use_depth:
+            # backproject depth
+            fx = self.intrinsic_matrix[0, 0]
+            fy = self.intrinsic_matrix[1, 1]
+            px = self.intrinsic_matrix[0, 2]
+            py = self.intrinsic_matrix[1, 2]
+            im_pcloud = posecnn_cuda.backproject_forward(fx, fy, px, py, im_depth)[0]
+
             index_sdf = []
             for i in range(len(self.pose_rbpf.instance_list)):
                 if self.pose_rbpf.rbpf_ok_list[i]:

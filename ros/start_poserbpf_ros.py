@@ -53,6 +53,15 @@ def parse_args():
                         help='directory of objects CAD models',
                         default='./cad_models',
                         type=str)
+    parser.add_argument('--modality', dest='modality',
+                        help='rgb or rgbd',
+                        default='rgbd',
+                        type=str)
+    parser.add_argument('--use_depth', dest='use_depth',
+                        help='if depth data is used',
+                        default='True',
+                        type=str)
+
 
     args = parser.parse_args()
     return args
@@ -90,14 +99,18 @@ if __name__ == '__main__':
     checkpoint_list = []
     codebook_list = []
     for obj in obj_list:
-        checkpoint_list.append(args.ckpt_dir+'{}_py3.pth'.format(obj))
+        if args.modality == 'rgbd':
+            checkpoint_list.append(args.ckpt_dir + '{}_py3.pth'.format(obj))
+        else:
+            checkpoint_list.append(args.ckpt_dir + '{}.pth'.format(obj))
         if not os.path.exists(args.codebook_dir):
             os.makedirs(args.codebook_dir)
         codebook_list.append(args.codebook_dir+'{}.pth'.format(obj))
 
     # image listener
     listener = ImageListener(obj_list, cfg_list, checkpoint_list, codebook_list,
-                             modality='rgbd', cad_model_dir=args.cad_dir)
+                             modality=args.modality, cad_model_dir=args.cad_dir,
+                             use_depth=(args.use_depth.lower() == 'true'))
 
     while not rospy.is_shutdown():
         if listener.input_rgb is not None:
