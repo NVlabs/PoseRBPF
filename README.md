@@ -178,6 +178,14 @@ rosrun rviz rviz -d ./ros/tracking.rviz
 rosbag play ./ros_data/demo_multiple.bag
 ```
 
+## Download
+- [CAD Model for YCB Objects](https://drive.google.com/file/d/1KTV3g9q4R6b8jtgCHnpMcQJBDU5ccetr/view?usp=sharing): 743MB
+- [CAD Model for T-LESS Objects](https://drive.google.com/file/d/15rCCI_hgsjei3zlvbF05HUzoYm2uP2fE/view?usp=sharing): 502MB
+- [RGB Auto-encoder weights (YCB)](https://drive.google.com/file/d/1LGH1N1F8BRDkym75Du02R6qvDat7_40T/view?usp=sharing): 6GB
+- [RGB-D Auto-encoder weights (YCB)](https://drive.google.com/file/d/1dwR4dWgp-1jjS0aFwMZt5p65OLl9UdaN/view?usp=sharing): 9GB
+- [RGB Auto-encoder weights (T-LESS)](https://drive.google.com/file/d/1NYhBfeuT3D73kG3SBN62-Bpfotmcf8Qg/view?usp=sharing): 8GB
+- [RGB-D Auto-encoder weights (T-LESS)](https://drive.google.com/file/d/1-JWBfSy75exvXIKyRyzePKKOGHCVJWLi/view?usp=sharing): 12GB
+
 ## Testing on the YCB Video Dataset
 - Download checkpoints from [the google drive folder](https://drive.google.com/drive/folders/1mkW9RSgXHKnYmSJIKEI3pjaNgc_IKpgD?usp=sharing) (```ycb_rgbd_full.tar.gz``` or ```ycb_rgb_full.tar.gz```) and unzip to the checkpoint directory.
 - Download all the data in the [YCB Video Dataset](https://rse-lab.cs.washington.edu/projects/posecnn/) so the ```../YCB_Video_Dataset/data``` folder contains all the sequences.
