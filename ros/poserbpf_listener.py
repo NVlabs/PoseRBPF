@@ -55,7 +55,8 @@ def ros_qt_to_rt(rot, trans):
 class ImageListener:
 
     def __init__(self, object_list, cfg_list, checkpoint_list, codebook_list,
-                 modality, cad_model_dir, category='ycb', refine_single=True, refine_multiple=False, use_depth=True):
+                 modality, cad_model_dir, category='ycb', refine_single=True, refine_multiple=False, use_depth=True,
+                 use_self_supervised_ckpts=True):
 
         print(' *** Initializing PoseRBPF ROS Node ... ')
 
@@ -86,6 +87,8 @@ class ImageListener:
         self.pose_rbpf = PoseRBPF(self.object_list, self.cfg_list, self.ckpt_list,
                                   self.codebook_list, category,
                                   modality, cad_model_dir, refine=refine_single)
+
+        self.ssv_ckpts = use_self_supervised_ckpts
 
         # initial sdf refinement for multiple objects at once
         self.refine_multiple = refine_multiple
@@ -340,6 +343,11 @@ class ImageListener:
         image_depth = image_depth.unsqueeze(2)
         im_label = torch.from_numpy(label).cuda()
 
+        if self.ssv_ckpts:
+            image_input = image_rgb[:, :, [2, 1, 0]]
+        else:
+            image_input = image_rgb
+
         if not self.use_depth:
             image_depth = None
 
@@ -395,7 +403,7 @@ class ImageListener:
         for i in range(len(self.pose_rbpf.instance_list)):
             if self.pose_rbpf.rbpf_ok_list[i]:
                 roi = self.pose_rbpf.rbpf_list[i].roi_assign
-                Tco, max_sim = self.pose_rbpf.pose_estimation_single(i, roi, image_rgb, image_depth, visualize=False)
+                Tco, max_sim = self.pose_rbpf.pose_estimation_single(i, roi, image_input, image_depth, visualize=False)
 
         # initialize new object
         for i in range(num_rois):
@@ -409,11 +417,11 @@ class ImageListener:
                 if self.pose_rbpf.instance_list[j] == target_obj and self.pose_rbpf.rbpf_ok_list[j] == False:
                     add_new_instance = False
                     Tco, max_sim = self.pose_rbpf.pose_estimation_single(j, roi,
-                                                                         image_rgb,
+                                                                         image_input,
                                                                          image_depth, visualize=False)
             if add_new_instance:
                 self.pose_rbpf.add_object_instance(target_obj)
-                Tco, max_sim = self.pose_rbpf.pose_estimation_single(len(self.pose_rbpf.instance_list)-1, roi, image_rgb,
+                Tco, max_sim = self.pose_rbpf.pose_estimation_single(len(self.pose_rbpf.instance_list)-1, roi, image_input,
                                                                      image_depth, visualize=False)
 
         # SDF refinement for multiple objects

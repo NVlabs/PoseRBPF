@@ -69,15 +69,48 @@ class PoseRBPF:
                 print('Cannot find codebook in : ' + codebook_file)
                 print('Start computing codebook ...')
                 if self.obj_ctg == 'ycb':
-                    dataset_code = ycb_codebook_online_generator(cad_model_dir, [obj],
-                                                                 self.cfg_list[self.obj_list.index(obj)].TRAIN.RENDER_DIST[0],
-                                                                 output_size=(256, 256),
-                                                                 gpu_id=self.cfg_list[self.obj_list.index(obj)].GPU_ID)
+                    if modality == 'rgbd':
+                        dataset_code = ycb_codebook_online_generator(cad_model_dir, [obj],
+                                                                     self.cfg_list[self.obj_list.index(obj)].TRAIN.RENDER_DIST[0],
+                                                                     output_size=(256, 256),
+                                                                     fu=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.FU,
+                                                                     fv=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.FV,
+                                                                     u0=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.U0,
+                                                                     v0=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.V0,
+                                                                     gpu_id=self.cfg_list[self.obj_list.index(obj)].GPU_ID)
+                    else:
+                        dataset_code = ycb_codebook_online_generator(cad_model_dir, [obj],
+                                                                     self.cfg_list[
+                                                                     self.obj_list.index(obj)].TRAIN.RENDER_DIST[0],
+                                                                     output_size=(128, 128),
+                                                                     fu=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.FU,
+                                                                     fv=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.FV,
+                                                                     u0=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.U0,
+                                                                     v0=self.cfg_list[
+                                                                         self.obj_list.index(obj)].TRAIN.V0,
+                                                                     gpu_id=self.cfg_list[
+                                                                     self.obj_list.index(obj)].GPU_ID)
                 elif self.obj_ctg == 'tless':
-                    dataset_code = tless_codebook_online_generator(cad_model_dir, [obj],
-                                                                 self.cfg_list[self.obj_list.index(obj)].TRAIN.RENDER_DIST[0],
-                                                                 output_size=(256, 256),
-                                                                 gpu_id=self.cfg_list[self.obj_list.index(obj)].GPU_ID)
+                    if modality == 'rgbd':
+                        dataset_code = tless_codebook_online_generator(cad_model_dir, [obj],
+                                                                     self.cfg_list[self.obj_list.index(obj)].TRAIN.RENDER_DIST[0],
+                                                                     output_size=(256, 256),
+                                                                     gpu_id=self.cfg_list[self.obj_list.index(obj)].GPU_ID)
+                    else:
+                        dataset_code = tless_codebook_online_generator(cad_model_dir, [obj],
+                                                                       self.cfg_list[
+                                                                           self.obj_list.index(obj)].TRAIN.RENDER_DIST[
+                                                                           0],
+                                                                       output_size=(128, 128),
+                                                                       gpu_id=self.cfg_list[
+                                                                           self.obj_list.index(obj)].GPU_ID)
                 if modality == 'rgbd':
                     self.aae_full.compute_codebook_rgbd(dataset_code, codebook_file, save=True)
                 else:

@@ -23,8 +23,8 @@ PF:
   VISUALIZE: True
   SAVE_DIR: './results/ycb_test/025_mug/'
   TRACK_OBJ: '025_mug'
-  N_E_ROT: 300
-  WT_RESHAPE_VAR: 0.1
+  N_E_ROT: 20
+  WT_RESHAPE_VAR: 0.05
   DEPTH_STD: 0.1
   MOTION_T_FACTOR: 0.0
   MOTION_R_FACTOR: 0.0

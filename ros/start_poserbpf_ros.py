@@ -61,6 +61,10 @@ def parse_args():
                         help='if depth data is used',
                         default='True',
                         type=str)
+    parser.add_argument('--use_ssv_ckpts', dest='use_ssv_ckpts',
+                        help='if self supervised checkpoints are used',
+                        default='False',
+                        type=str)
 
 
     args = parser.parse_args()
@@ -110,7 +114,8 @@ if __name__ == '__main__':
     # image listener
     listener = ImageListener(obj_list, cfg_list, checkpoint_list, codebook_list,
                              modality=args.modality, cad_model_dir=args.cad_dir,
-                             use_depth=(args.use_depth.lower() == 'true'))
+                             use_depth=(args.use_depth.lower() == 'true'),
+                             use_self_supervised_ckpts=(args.use_ssv_ckpts.lower()=='true'))
 
     while not rospy.is_shutdown():
         if listener.input_rgb is not None:

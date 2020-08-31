@@ -376,25 +376,28 @@ class AAE(nn.Module):
         print('Finished assigning weights to AAE !')
 
     # codebook generation and saving
-    def compute_codebook(self, code_dataset, save_dir, batch_sz=1000, code_dim=128, save=True):
-        assert self.weights_loaded, "need to load pretrained weights!"
+    def compute_codebook(self, code_dataset, save_dir, batch_sz=500, code_dim=128, save=True):
         codebook_batch_size = batch_sz
-        code_generator = torch.utils.data.DataLoader(code_dataset, batch_size=codebook_batch_size, shuffle=False, num_workers=0)
+        code_generator = torch.utils.data.DataLoader(code_dataset, batch_size=codebook_batch_size, shuffle=False,
+                                                     num_workers=0)
         print('code book size {}'.format(len(code_dataset)))
         step = 0
+        self.encoder = self.encoder.cuda()
         self.encoder.eval()
-
-        codebook_cpt = torch.zeros(len(code_dataset), code_dim).cuda()
-        codepose_cpt = torch.zeros(len(code_dataset), 7).cuda()
+        n_single_object = int(len(code_dataset))
+        codebook_cpt = torch.zeros(n_single_object, code_dim).cuda()
+        codepose_cpt = torch.zeros(n_single_object, 7).cuda()
 
         for inputs in code_generator:
-            poses, rgb, depth = inputs
+            rgb, poses, _ = inputs
 
             if self.use_GPU:
                 poses = poses.cuda()
                 rgb = rgb.cuda()
 
-            code = self.encoder.forward(rgb).detach().view(rgb.size(0), -1)
+            class_info = torch.ones((rgb.size(0), 1, rgb.size(2), rgb.size(3)), dtype=torch.float32).float().cuda()
+            input = torch.cat((rgb, class_info), dim=1)
+            code = self.encoder.forward(input).detach().view(input.size(0), -1)
 
             print(code.size())
 

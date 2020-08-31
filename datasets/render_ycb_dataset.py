@@ -544,7 +544,9 @@ class ycb_multi_render_dataset(torch.utils.data.Dataset):
 
 # render on the fly
 class ycb_codebook_online_generator(torch.utils.data.Dataset):
-    def __init__(self, model_dir, model_names, render_dist, output_size=(128, 128), gpu_id=0, ts=15):
+    def __init__(self, model_dir, model_names, render_dist, output_size=(128, 128),
+                 fu=1066.778, fv=1056.487, u0=312.987/640*128, v0=241.311/480*128,
+                 gpu_id=0, ts=15):
         self.renderer = YCBRenderer(128, 128, gpu_id)
         self.h = 128
         self.w = 128
@@ -562,8 +564,8 @@ class ycb_codebook_online_generator(torch.utils.data.Dataset):
         self.renderer_cam_pos = [0, 0, 0]
         self.renderer.set_camera_default()
         self.renderer.set_projection_matrix(self.w, self.h,
-                                            1066.778, 1056.487,
-                                            312.987 / 640 *128, 241.311 /480 * 128, 0.01, 10)
+                                            fu, fv,
+                                            u0, v0, 0.01, 10)
 
         self.render_dist = render_dist
         self.output_size = output_size
