@@ -34,6 +34,7 @@ sh build.sh
 ## Download
 - [CAD Model for YCB Objects](https://drive.google.com/file/d/1KTV3g9q4R6b8jtgCHnpMcQJBDU5ccetr/view?usp=sharing): 743MB
 - [CAD Model for T-LESS Objects](https://drive.google.com/file/d/15rCCI_hgsjei3zlvbF05HUzoYm2uP2fE/view?usp=sharing): 502MB
+- [PoseCNN weights for 20 YCB Objects](https://drive.google.com/file/d/17KX_mOypOslI9zoh1wRGSKdCuIPJ8yNt/view?usp=sharing): 76MB
 - [RGB Auto-encoder weights (YCB)](https://drive.google.com/file/d/1LGH1N1F8BRDkym75Du02R6qvDat7_40T/view?usp=sharing): 6GB
 - [RGB-D Auto-encoder weights (YCB)](https://drive.google.com/file/d/1dwR4dWgp-1jjS0aFwMZt5p65OLl9UdaN/view?usp=sharing): 9GB
 - [Self-supervided trained RGB Auto-encoder weights (YCB)](https://drive.google.com/file/d/1mHHbIzDO3kbIa9_4-Z5GU-dGoV-rMyJL/view?usp=sharing): 5GB
@@ -127,9 +128,7 @@ rosdep update
 ./scripts/download_ros_demo.sh
 ```
 
-- Download PoseCNN checkpoint from [here](https://drive.google.com/file/d/17KX_mOypOslI9zoh1wRGSKdCuIPJ8yNt/view?usp=sharing) and add to ```./checkpoints/```
-
-- Run PoseCNN node (with roscore running in another terminal):
+- Run PoseCNN node (with roscore running in another terminal, download PoseCNN weights first):
 ```angular2html
 ./scripts/run_ros_demo_posecnn.sh
 ```
@@ -160,11 +159,7 @@ rosbag play ./ros_data/demo_single.bag
 ./scripts/download_ros_demo_multiple.sh
 ```
 
-- Download PoseCNN checkpoint from [here](https://drive.google.com/file/d/17KX_mOypOslI9zoh1wRGSKdCuIPJ8yNt/view?usp=sharing) and add to ```./checkpoints/```
-
-- Download additional checkpoints from [here](https://drive.google.com/file/d/19V75k5QzczyXIE9bu-WJJoqJUpAVy1G0/view?usp=sharing) and add to ```./checkpoints/```
-
-- Run PoseCNN node (with roscore running in another terminal):
+- Run PoseCNN node (with roscore running in another terminal, download PoseCNN weights first):
 ```angular2html
 ./scripts/run_ros_demo_posecnn.sh
 ```
