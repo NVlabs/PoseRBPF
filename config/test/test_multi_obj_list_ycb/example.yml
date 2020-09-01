@@ -2,5 +2,10 @@ TEST:
   OBJECTS: !!python/tuple [
     '003_cracker_box',
     '006_mustard_bottle',
-    '024_bowl'
+    '010_potted_meat_can',
+    '024_bowl',
+    '025_mug',
+    '037_scissors',
+    '040_large_marker',
+    '011_banana'
                            ]
