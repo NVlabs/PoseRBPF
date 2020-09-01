@@ -40,6 +40,8 @@ sh build.sh
 - [RGB Auto-encoder weights (T-LESS)](https://drive.google.com/file/d/1NYhBfeuT3D73kG3SBN62-Bpfotmcf8Qg/view?usp=sharing): 8GB
 - [RGB-D Auto-encoder weights (T-LESS)](https://drive.google.com/file/d/1-JWBfSy75exvXIKyRyzePKKOGHCVJWLi/view?usp=sharing): 12GB
 
+Downolad files as needed. Extract CAD models under the ```cad_models``` directory, and extract model weights under the ```checkpoints``` directory.
+
 ## A quick demo on the YCB Video Dataset 
 - The demo shows tracking ```003_cracker_box``` on YCB Video Dataset.
 - Run script ```download_demo.sh``` to download checkpoint (434 MB), CAD models (743 MB), 2D detections (13 MB), and necessary data (3 GB) for the demo:
@@ -66,12 +68,12 @@ sh build.sh
 |   |── pose_rbpf                   # particle filters
 |   └── ...
 |── YCB_Video_Dataset               # to store ycb data
-|   |── cameras  
+|   |── cameras
 |   |── data 
 |   |── image_sets 
 |   |── keyframes 
-|   |── poses               
-|   └── ...           
+|   |── poses
+|   └── ...
 └── ...
 ```
 
