@@ -24,7 +24,7 @@ from scipy.optimize import minimize
 from geometry_msgs.msg import PoseStamped, PoseArray
 from rospy.numpy_msg import numpy_msg
 import matplotlib.pyplot as plt
-from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
+from config.config import cfg
 from utils.nms import nms
 from utils.cython_bbox import bbox_overlaps
 

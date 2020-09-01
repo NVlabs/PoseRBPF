@@ -29,7 +29,7 @@ import _init_paths
 import networks
 
 from cv_bridge import CvBridge, CvBridgeError
-from config.config_posecnn import cfg, cfg_from_file, get_output_dir
+from config.config_posecnn import cfg, cfg_from_file
 from datasets.factory import get_dataset
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo
