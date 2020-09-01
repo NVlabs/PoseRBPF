@@ -188,7 +188,7 @@ rosbag play ./ros_data/demo_multiple.bag
 - [CAD Model for T-LESS Objects](https://drive.google.com/file/d/15rCCI_hgsjei3zlvbF05HUzoYm2uP2fE/view?usp=sharing): 502MB
 - [RGB Auto-encoder weights (YCB)](https://drive.google.com/file/d/1LGH1N1F8BRDkym75Du02R6qvDat7_40T/view?usp=sharing): 6GB
 - [RGB-D Auto-encoder weights (YCB)](https://drive.google.com/file/d/1dwR4dWgp-1jjS0aFwMZt5p65OLl9UdaN/view?usp=sharing): 9GB
-- [Self-supervided trained RGB Auto-encoder weights (YCB)](https://drive.google.com/file/d/1dwR4dWgp-1jjS0aFwMZt5p65OLl9UdaN/view?usp=sharing): 6GB
+- [Self-supervided trained RGB Auto-encoder weights (YCB)](https://drive.google.com/file/d/1mHHbIzDO3kbIa9_4-Z5GU-dGoV-rMyJL/view?usp=sharing): 5GB
 - [RGB Auto-encoder weights (T-LESS)](https://drive.google.com/file/d/1NYhBfeuT3D73kG3SBN62-Bpfotmcf8Qg/view?usp=sharing): 8GB
 - [RGB-D Auto-encoder weights (T-LESS)](https://drive.google.com/file/d/1-JWBfSy75exvXIKyRyzePKKOGHCVJWLi/view?usp=sharing): 12GB
 
