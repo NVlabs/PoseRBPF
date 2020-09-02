@@ -921,7 +921,7 @@ class PoseRBPF:
         return pdf_matrix
 
     # filtering
-    def process_poserbpf(self, image, intrinsics, depth=None, mask=None, apply_motion_prior=False):
+    def process_poserbpf(self, image, intrinsics, depth=None, mask=None, apply_motion_prior=False, use_detection_prior=False):
         # propagation
         if apply_motion_prior:
             self.rbpf.propagate_particles(self.T_c1c0, self.T_o0o1, 0, 0, intrinsics)
@@ -934,6 +934,9 @@ class PoseRBPF:
             z_noise = self.target_obj_cfg.PF.Z_NOISE
             self.rbpf.add_noise_r3(uv_noise, z_noise)
             self.rbpf.add_noise_rot()
+
+        if use_detection_prior:
+            self.use_detection_priors(int(self.rbpf.n_particles/2))
 
         # compute pdf matrix for each particle
         if self.modality == 'rgbd':
@@ -1021,12 +1024,12 @@ class PoseRBPF:
                     self.rbpf_ok_list[target_instance_idx] = True
                     self.process_poserbpf(image,
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
-                                      depth=depth)
+                                      depth=depth, use_detection_prior=True)
 
             else:
                 self.process_poserbpf(image,
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
-                                      depth=depth)
+                                      depth=depth, use_detection_prior=True)
                 if self.log_max_sim[-1] < 0.6:
                     self.rbpf_ok_list[target_instance_idx] = False
 
