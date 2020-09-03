@@ -1,5 +1,7 @@
 # PoseRBPF: A Rao-Blackwellized Particle Filter for 6D Object Pose Tracking
-* [[paper](https://arxiv.org/abs/1905.09304)]
+![PoseRBPF](./pics/SysDiagram.png)
+* [paper](https://arxiv.org/abs/1905.09304)
+* [video](https://youtu.be/lE5gjzRKWuA)
 
 ## Citing PoseRBPF
 If you find the PoseRBPF code useful, please consider citing:
@@ -44,6 +46,7 @@ sh build.sh
 Downolad files as needed. Extract CAD models under the ```cad_models``` directory, and extract model weights under the ```checkpoints``` directory.
 
 ## A quick demo on the YCB Video Dataset 
+![demo](./pics/tracking_demo.png)
 - The demo shows tracking ```003_cracker_box``` on YCB Video Dataset.
 - Run script ```download_demo.sh``` to download checkpoint (434 MB), CAD models (743 MB), 2D detections (13 MB), and necessary data (3 GB) for the demo:
 ```angular2html
@@ -84,6 +87,7 @@ Downolad files as needed. Extract CAD models under the ```cad_models``` director
 ```
 
 ## Online Real-world Pose Estimation using ROS
+![ros_demo](./pics/ros_tracking.gif)
 - Due to the incompatibility between ROS Kinetic and Python 3, the ROS node only runs with Python 2.7. We first create the virtual env with ```pose_rbpf_env_py2.yml```:
 ```angular2html
 conda env create -f pose_rbpf_env_py2.yml
