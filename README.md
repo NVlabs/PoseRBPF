@@ -176,19 +176,19 @@ rosbag play ./ros_data/demo_single.bag
 ./scripts/run_ros_demo_posecnn.sh
 ```
 
-- Run PoseRBPF node for RGB-D tracking (with roscore running in another terminal):
+- Run PoseRBPF node with self-supervised trained RGB Auto-encoder weights:
+```angular2html
+./scripts/run_ros_demo_rgb_multiple_ssv.sh
+```
+
+- (Optional) Run PoseRBPF node with RGB-D Auto-encoder weights instead:
 ```angular2html
 ./scripts/run_ros_demo_multiple.sh
 ```
 
-- (Optional) For RGB tracking run this command instead:
+- (Optional) Run PoseRBPF node with RGB Auto-encoder weights instead:
 ```angular2html
 ./scripts/run_ros_demo_rgb_multiple.sh
-```
-
-- (Optional) For RGB-D tracking with self-supervised trained checkpoints run this command instead:
-```angular2html
-./scripts/run_ros_demo_rgb_multiple_ssv.sh
 ```
 
 - Run RVIZ in the PoseRBPF directory:
