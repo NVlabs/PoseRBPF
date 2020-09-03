@@ -200,6 +200,7 @@ rosrun rviz rviz -d ./ros/tracking.rviz
 ```angular2html
 rosbag play ./ros_data/demo_multiple.bag
 ```
+Note that PoseRBPF takes certain time to initialize each object before tracking. You can pause the ROS bag by pressing space for initialization, and then press space again to resume tracking.
 
 ## Testing on the YCB Video Dataset
 - Download checkpoints from [the google drive folder](https://drive.google.com/drive/folders/1mkW9RSgXHKnYmSJIKEI3pjaNgc_IKpgD?usp=sharing) (```ycb_rgbd_full.tar.gz``` or ```ycb_rgb_full.tar.gz```) and unzip to the checkpoint directory.
