@@ -46,7 +46,7 @@ sh build.sh
 Downolad files as needed. Extract CAD models under the ```cad_models``` directory, and extract model weights under the ```checkpoints``` directory.
 
 ## A quick demo on the YCB Video Dataset 
-![demo](./pics/tracking_demo.png)
+![demo](./pics/demo_tracking.gif)
 - The demo shows tracking ```003_cracker_box``` on YCB Video Dataset.
 - Run script ```download_demo.sh``` to download checkpoint (434 MB), CAD models (743 MB), 2D detections (13 MB), and necessary data (3 GB) for the demo:
 ```angular2html
