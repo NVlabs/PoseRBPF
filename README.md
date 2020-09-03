@@ -1,7 +1,9 @@
 # PoseRBPF: A Rao-Blackwellized Particle Filter for 6D Object Pose Tracking
 ![PoseRBPF](./pics/SysDiagram.png)
-* [paper](https://arxiv.org/abs/1905.09304)
-* [video](https://youtu.be/lE5gjzRKWuA)
+* [PoseRBPF Paper](https://arxiv.org/abs/1905.09304)
+* [Self-supervision Paper](https://arxiv.org/abs/1909.10159)
+* [Pose Estimation Video](https://youtu.be/lE5gjzRKWuA)
+* [Robot Manipulation Video](https://youtu.be/W1Y0Mmh1Gd8)
 
 ## Citing PoseRBPF
 If you find the PoseRBPF code useful, please consider citing:
@@ -12,6 +14,12 @@ author    = {Xinke Deng and Arsalan Mousavian and Yu Xiang and Fei Xia and Timot
 title     = {PoseRBPF: A Rao-Blackwellized Particle Filter for 6D Object Pose Tracking},
 booktitle = {Robotics: Science and Systems (RSS)},
 year      = {2019}
+}
+@inproceedings{deng2020self,
+author    = {Xinke Deng and Yu Xiang and Arsalan Mousavian and Clemens Eppner and Timothy Bretl and Dieter Fox},
+title     = {Self-supervised 6D Object Pose Estimation for Robot Manipulation},
+booktitle = {International Conference on Robotics and Automation (ICRA)},
+year      = {2020}
 }
 ```
 
