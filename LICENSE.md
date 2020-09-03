@@ -1,4 +1,4 @@
-# NVIDIA Source Code License-NC
+# NVIDIA Source Code License for PoseRBPF: A Rao-Blackwellized Particle Filter for 6D Object Pose Tracking
 
 ## 1. Definitions
 
