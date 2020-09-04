@@ -25,7 +25,7 @@ year      = {2020}
 
 ## Installation 
 ```bash
-git clone https://github.com/XinkeAE/PoseRBPF.git --recursive
+git clone https://github.com/NVlabs/PoseRBPF.git --recursive
 ```
 
 Install dependencies:
