@@ -126,7 +126,11 @@ class ycb_video_dataset(data.Dataset):
             assert object_name in object_names_dataset, \
                 "specified object is not in this sequence, try another sequence !!!"
 
-        img = np.array(Image.open(fn))
+        if not os.path.exists(fn):
+            filename = fn.replace('png', 'jpg')
+        else:
+            filename = fn
+        img = np.array(Image.open(filename))
 
         # read semantic labels
         mask_name = fn.replace('color', 'label')
