@@ -129,4 +129,3 @@ if __name__ == '__main__':
                                      path=args.dataset_dir,
                                      list_file=test_list_file)
         pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1, demo=args.demo)
-

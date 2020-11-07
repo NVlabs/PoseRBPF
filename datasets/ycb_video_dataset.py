@@ -177,4 +177,3 @@ class ycb_video_dataset(data.Dataset):
         intrinsics = dataset_info['intrinsic_matrix']
 
         return img, depth, pose, intrinsics, mask
-
