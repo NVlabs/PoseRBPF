@@ -8,6 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 import pdb
 import glob
 import copy
+import scipy
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
 import pprint
 from transforms3d.axangles import *
@@ -22,7 +23,7 @@ import pickle
 from .sdf_optimizer import *
 
 class PoseRBPF:
-    def __init__(self, obj_list, cfg_list, ckpt_list, codebook_list, obj_ctg, modality, cad_model_dir, visualize=True, refine=False):
+    def __init__(self, obj_list, cfg_list, ckpt_list, codebook_list, obj_ctg, modality, cad_model_dir, visualize=True, refine=False, gpu_id=0):
 
         self.visualize = visualize
         self.obj_list = obj_list
@@ -34,6 +35,7 @@ class PoseRBPF:
 
         # load the object information
         self.cfg_list = cfg_list
+        self.gpu_id = gpu_id
 
         # load encoders and poses
         self.aae_list = []
@@ -127,7 +129,7 @@ class PoseRBPF:
                                [0, self.cfg_list[0].PF.FV, self.cfg_list[0].PF.V0],
                                [0, 0, 1.]], dtype=np.float32)
 
-        self.renderer = render_wrapper(self.obj_list, self.intrinsics, gpu_id=self.cfg_list[0].GPU_ID,
+        self.renderer = render_wrapper(self.obj_list, self.intrinsics, gpu_id=self.gpu_id,
                                        model_dir=cad_model_dir,
                                        model_ctg=self.obj_ctg,
                                        im_w=int(self.cfg_list[0].PF.W),
@@ -848,6 +850,7 @@ class PoseRBPF:
         pdf_matrix = torch.mul(pdf_matrix, depth_scores)
 
         # determine system failure
+        self.rbpf.max_sim_all = max_sim_all
         if max_sim_all < 0.6:
             self.rbpf_ok = False
 
@@ -922,6 +925,7 @@ class PoseRBPF:
             pdf_matrix = torch.mul(pdf_matrix, depth_scores)
 
         # determine system failure
+        self.rbpf.max_sim_all = max_sim_all
         if max_sim_all < 0.6:
             self.rbpf_ok = False
 
@@ -1039,16 +1043,14 @@ class PoseRBPF:
                 self.process_poserbpf(image,
                                       torch.from_numpy(self.intrinsics).unsqueeze(0),
                                       depth=depth, use_detection_prior=True)
-                if self.log_max_sim[-1] < 0.6:
+                if self.log_max_sim[-1] < 0.75:
+                    print('{} low similarity, mark untracked'.format(self.instance_list[target_instance_idx]))
                     self.rbpf_ok_list[target_instance_idx] = False
 
             if not dry_run:
                 print('Estimating {}, rgb sim = {}, depth sim = {}'.format(self.instance_list[target_instance_idx], self.max_sim_rgb, self.max_sim_depth))
 
         if visualize:
-            print(self.data_intrinsics)
-            print(self.rbpf_list[target_instance_idx].trans_bar)
-            print(self.rbpf_list[target_instance_idx].rot_bar)
             render_rgb, render_depth = self.renderer.render_pose(self.data_intrinsics,
                                                                  self.rbpf_list[target_instance_idx].trans_bar,
                                                                  self.rbpf_list[target_instance_idx].rot_bar,
@@ -1066,6 +1068,27 @@ class PoseRBPF:
         Tco[:3, 3] = self.rbpf.trans_bar
         max_sim = self.log_max_sim[-1]
         return Tco, max_sim
+
+
+    # save result to mat file
+    def save_results_mat(self, filename):
+
+        # collect rois from rbpfs
+        rois = np.zeros((0, 7), dtype=np.float32)
+        poses = np.zeros((0, 7), dtype=np.float32)
+        for i in range(len(self.instance_list)):
+            roi = np.zeros((1, 7), dtype=np.float32)
+            roi[0, :6] = self.rbpf_list[i].roi
+            roi[0, 6] = self.rbpf_list[i].max_sim_all
+            rois = np.concatenate((rois, roi), axis=0)
+            pose = np.zeros((1, 7), dtype=np.float32)
+            pose[0, :4] = mat2quat(self.rbpf_list[i].rot_bar)
+            pose[0, 4:] = self.rbpf_list[i].trans_bar
+            poses = np.concatenate((poses, pose), axis=0)
+
+        result = {'poses': poses, 'rois': rois, 'intrinsic_matrix': self.intrinsics}
+        scipy.io.savemat(filename, result, do_compression=True)
+        print('%s: %d objects' % (filename, rois.shape[0]))
 
 
     # run SDF pose refine for multiple objects at once
@@ -1130,9 +1153,11 @@ class PoseRBPF:
                 cls_index = torch.cat((cls_index, index), dim=0)
                 index = i * torch.ones((n, 1), dtype=torch.float32, device=0)
                 obj_index = torch.cat((obj_index, index), dim=0)
-                print('sdf {} points for object {}, class {} {}'.format(n, i, cls, self.obj_list[cls]))
+                if visualize:
+                    print('sdf {} points for object {}, class {} {}'.format(n, i, cls, self.obj_list[cls]))
             else:
-                print('sdf {} points for object {}, class {} {}, no refinement'.format(n, i, cls, self.obj_list[cls]))
+                if visualize:
+                    print('sdf {} points for object {}, class {} {}, no refinement'.format(n, i, cls, self.obj_list[cls]))
 
             if visualize and n <= 100:
                 fig = plt.figure()
@@ -1156,7 +1181,8 @@ class PoseRBPF:
 
         # data
         n = pix_index.shape[0]
-        print('sdf with {} points'.format(n))
+        if visualize:
+            print('sdf with {} points'.format(n))
         if n == 0:
             return
         points = im_pcloud[pix_index[:, 0], pix_index[:, 1], :]

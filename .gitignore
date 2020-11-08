@@ -11,6 +11,7 @@ logs
 *png
 checkpoints/
 results/
+output/
 data_training/
 utils/bbox.c
 

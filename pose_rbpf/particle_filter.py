@@ -52,6 +52,7 @@ class particle_filter():
         self.rot_bar = np.identity(3)
         self.rot_bar_prev = np.identity(3)
         self.rot_var = cfg_pf.ROT_VAR
+        self.max_sim_all = 0
 
         # motion model
         self.delta_rot = np.identity(3)

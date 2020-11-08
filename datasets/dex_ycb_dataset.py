@@ -278,6 +278,10 @@ class dex_ycb_dataset(data.Dataset):
         s, c, f = self._mapping[idx]
 
         is_testing = f % _BOP_EVAL_SUBSAMPLING_FACTOR == 0
+        if self._split == 'test' and not is_testing:
+            sample = {'is_testing': is_testing}
+            return sample
+
         scene_id, im_id = self.get_bop_id_from_idx(idx)
         video_id = '%04d' % (scene_id)
         image_id = '%06d' % (im_id)
@@ -412,19 +416,21 @@ class dex_ycb_dataset(data.Dataset):
             rois_result = result['rois'].copy()
             labels_result = result['labels'].copy()
 
-            # select the classes
+            # select the classes, one object per class
             index = []
+            flags = np.zeros((self._num_classes, ), dtype=np.int32)
             for i in range(poses_result.shape[0]):
                 cls = self._posecnn_class_indexes[int(poses_result[i, 1])] - 1
                 ind = np.where(classes == cls)[0]
-                if len(ind) > 0:
+                if len(ind) > 0 and flags[ind] == 0:
                     index.append(i)
                     poses_result[i, 1] = ind
                     rois_result[i, 1] = ind
+                    flags[ind] = 1
             poses_result = poses_result[index, :]
             rois_result = rois_result[index, :]
         else:
-            print('no posecnn result %s' % (roidb['posecnn']))
+            # print('no posecnn result %s' % (roidb['posecnn']))
             poses_result = np.zeros((0, 9), dtype=np.float32)
             rois_result = np.zeros((0, 7), dtype=np.float32)
             labels_result = np.zeros((0, 1), dtype=np.float32)
@@ -471,19 +477,13 @@ class dex_ycb_dataset(data.Dataset):
         return points, points_all
 
 
-    def write_dop_results(self, output_dir):
+    def write_dop_results(self, output_dir, modality):
         # only write the result file
-        filename = os.path.join(output_dir, 'posecnn_' + self.name + '.csv')
+        filename = os.path.join(output_dir, 'poserbpf_' + self.name + '_' + modality + '.csv')
         f = open(filename, 'w')
         f.write('scene_id,im_id,obj_id,score,R,t,time\n')
 
-        if cfg.TEST.POSE_REFINE:
-            filename_refined = os.path.join(output_dir, 'posecnn_' + self.name + '_refined.csv')
-            f1 = open(filename_refined, 'w')
-            f1.write('scene_id,im_id,obj_id,score,R,t,time\n')
-
         # list the mat file
-        images_color = []
         filename = os.path.join(output_dir, '*.mat')
         files = sorted(glob.glob(filename))
 
@@ -505,7 +505,7 @@ class dex_ycb_dataset(data.Dataset):
             rois = result['rois']
             num = rois.shape[0]
             for j in range(num):
-                obj_id = cfg.TRAIN.CLASSES[int(rois[j, 1])]
+                obj_id = self._class_index[int(rois[j, 1])] + 1
                 if obj_id == 0:
                     continue
                 score = rois[j, -1]
@@ -524,29 +524,13 @@ class dex_ycb_dataset(data.Dataset):
                     time=run_time)
                 f.write(line)
 
-                if cfg.TEST.POSE_REFINE:
-                    R = quat2mat(result['poses_refined'][j, :4].flatten())
-                    t = result['poses_refined'][j, 4:]
-                    line = '{scene_id},{im_id},{obj_id},{score},{R},{t},{time}\n'.format(
-                        scene_id=scene_id,
-                        im_id=im_id,
-                        obj_id=obj_id,
-                        score=score,
-                        R=' '.join(map(str, R.flatten().tolist())),
-                        t=' '.join(map(str, t.flatten().tolist())),
-                        time=run_time)
-                    f1.write(line)
-
         # close file
         f.close()
-        if cfg.TEST.POSE_REFINE:
-            f1.close()
 
 
     # compute box
     def compute_box(self, cls, intrinsic_matrix, RT):
-        classes = np.array(cfg.TRAIN.CLASSES)
-        ind = np.where(classes == cls)[0]
+        ind = np.where(self._class_index == cls)[0]
         x3d = np.ones((4, self._points_all.shape[1]), dtype=np.float32)
         x3d[0, :] = self._points_all[ind,:,0]
         x3d[1, :] = self._points_all[ind,:,1]
@@ -561,10 +545,10 @@ class dex_ycb_dataset(data.Dataset):
         return [x1, y1, x2, y2]
 
 
-    def evaluation(self, output_dir):
-        self.write_dop_results(output_dir)
+    def evaluation(self, output_dir, modality):
+        self.write_dop_results(output_dir, modality)
 
-        filename = os.path.join(output_dir, 'results_posecnn.mat')
+        filename = os.path.join(output_dir, 'results_poserbpf.mat')
         if os.path.exists(filename):
             results_all = scipy.io.loadmat(filename)
             print('load results from file')
@@ -580,7 +564,7 @@ class dex_ycb_dataset(data.Dataset):
         else:
             # save results
             num_max = 200000
-            num_results = 2
+            num_results = 1
             distances_sys = np.zeros((num_max, num_results), dtype=np.float32)
             distances_non = np.zeros((num_max, num_results), dtype=np.float32)
             errors_rotation = np.zeros((num_max, num_results), dtype=np.float32)
@@ -649,7 +633,7 @@ class dex_ycb_dataset(data.Dataset):
                     # find the pose
                     object_index = np.where(cls_indexes == cls)[0][0]
                     RT_gt = poses[object_index, :, :]
-                    box_gt = self.compute_box(cls, intrinsic_matrix, RT_gt)
+                    box_gt = self.compute_box(cls - 1, intrinsic_matrix, RT_gt)
 
                     results_seq_id[count] = scene_id
                     results_frame_id[count] = im_id
@@ -661,7 +645,7 @@ class dex_ycb_dataset(data.Dataset):
                     if len(result['rois']) > 0:
                         for k in range(result['rois'].shape[0]):
                             ind = int(result['rois'][k, 1])
-                            if cls == cfg.TRAIN.CLASSES[ind]:
+                            if cls == self._class_index[ind] + 1:
                                 roi_index.append(k)
 
                     # select the roi
@@ -689,20 +673,6 @@ class dex_ycb_dataset(data.Dataset):
                         distances_non[count, 0] = add(RT[:3, :3], RT[:, 3],  RT_gt[:3, :3], RT_gt[:, 3], points)
                         errors_rotation[count, 0] = re(RT[:3, :3], RT_gt[:3, :3])
                         errors_translation[count, 0] = te(RT[:, 3], RT_gt[:, 3])
-
-                        # pose after depth refinement
-                        if cfg.TEST.POSE_REFINE:
-                            RT[:3, :3] = quat2mat(result['poses_refined'][roi_index, :4].flatten())
-                            RT[:, 3] = result['poses_refined'][roi_index, 4:]
-                            distances_sys[count, 1] = adi(RT[:3, :3], RT[:, 3],  RT_gt[:3, :3], RT_gt[:, 3], points)
-                            distances_non[count, 1] = add(RT[:3, :3], RT[:, 3],  RT_gt[:3, :3], RT_gt[:, 3], points)
-                            errors_rotation[count, 1] = re(RT[:3, :3], RT_gt[:3, :3])
-                            errors_translation[count, 1] = te(RT[:, 3], RT_gt[:, 3])
-                        else:
-                            distances_sys[count, 1] = np.inf
-                            distances_non[count, 1] = np.inf
-                            errors_rotation[count, 1] = np.inf
-                            errors_translation[count, 1] = np.inf
                     else:
                         distances_sys[count, :] = np.inf
                         distances_non[count, :] = np.inf
@@ -727,28 +697,28 @@ class dex_ycb_dataset(data.Dataset):
                        'results_object_id': results_object_id,
                        'results_cls_id': results_cls_id }
 
-            filename = os.path.join(output_dir, 'results_posecnn.mat')
+            filename = os.path.join(output_dir, 'results_poserbpf.mat')
             scipy.io.savemat(filename, results_all)
 
         # print the results
         # for each class
         import matplotlib.pyplot as plt
         max_distance = 0.1
-        index_plot = [0, 1]
-        color = ['r', 'b']
-        leng = ['PoseCNN', 'PoseCNN refined']
+        index_plot = [0]
+        color = ['r']
+        leng = ['PoseRBPF']
         num = len(leng)
-        ADD = np.zeros((self._num_classes_all, num), dtype=np.float32)
-        ADDS = np.zeros((self._num_classes_all, num), dtype=np.float32)
-        TS = np.zeros((self._num_classes_all, num), dtype=np.float32)
+        ADD = np.zeros((self._num_classes_all + 1, num), dtype=np.float32)
+        ADDS = np.zeros((self._num_classes_all + 1, num), dtype=np.float32)
+        TS = np.zeros((self._num_classes_all + 1, num), dtype=np.float32)
         classes = list(copy.copy(self._classes_all))
-        classes[0] = 'all'
-        for k in range(self._num_classes_all):
+        classes.append('all')
+        for k in range(self._num_classes_all + 1):
             fig = plt.figure(figsize=(16.0, 10.0))
-            if k == 0:
+            if k == self._num_classes_all:
                 index = range(len(results_cls_id))
             else:
-                index = np.where(results_cls_id == k)[0]
+                index = np.where(results_cls_id == k + 1)[0]
 
             if len(index) == 0:
                 continue
@@ -837,38 +807,10 @@ class dex_ycb_dataset(data.Dataset):
         print('==================ADD======================')
         for k in range(len(classes)):
             print('%s: %f' % (classes[k], ADD[k, 0]))
-        for k in range(len(classes)-1):
-            print('%f' % (ADD[k+1, 0]))
-        print('%f' % (ADD[0, 0]))
-        print(cfg.TRAIN.SNAPSHOT_INFIX)
         print('===========================================')
 
         # print ADD-S
         print('==================ADD-S====================')
         for k in range(len(classes)):
             print('%s: %f' % (classes[k], ADDS[k, 0]))
-        for k in range(len(classes)-1):
-            print('%f' % (ADDS[k+1, 0]))
-        print('%f' % (ADDS[0, 0]))
-        print(cfg.TRAIN.SNAPSHOT_INFIX)
-        print('===========================================')
-
-        # print ADD
-        print('==================ADD refined======================')
-        for k in range(len(classes)):
-            print('%s: %f' % (classes[k], ADD[k, 1]))
-        for k in range(len(classes)-1):
-            print('%f' % (ADD[k+1, 1]))
-        print('%f' % (ADD[0, 1]))
-        print(cfg.TRAIN.SNAPSHOT_INFIX)
-        print('===========================================')
-
-        # print ADD-S
-        print('==================ADD-S refined====================')
-        for k in range(len(classes)):
-            print('%s: %f' % (classes[k], ADDS[k, 1]))
-        for k in range(len(classes)-1):
-            print('%f' % (ADDS[k+1, 1]))
-        print('%f' % (ADDS[0, 1]))
-        print(cfg.TRAIN.SNAPSHOT_INFIX)
         print('===========================================')

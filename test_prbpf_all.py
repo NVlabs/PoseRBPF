@@ -42,6 +42,9 @@ def parse_args():
     parser.add_argument('--codebook_dir', dest='codebook_dir',
                         help='directory for codebooks',
                         default='./checkpoints/ycb_codebooks_roi_rgbd/', type=str)
+    parser.add_argument('--modality', dest='modality',
+                        help='modality',
+                        default='rgbd', type=str)
     parser.add_argument('--gpu', dest='gpu_id',
                         help='GPU device id to use [0]',
                         default=0, type=int)
@@ -272,7 +275,10 @@ if __name__ == '__main__':
     checkpoint_list = []
     codebook_list = []
     for obj in obj_list:
-        checkpoint_list.append(args.ckpt_dir+'{}_py3.pth'.format(obj))
+        if args.modality == 'rgbd':
+            checkpoint_list.append(args.ckpt_dir+'{}_py3.pth'.format(obj))
+        else:
+            checkpoint_list.append(args.ckpt_dir+'{}.pth'.format(obj))
         if not os.path.exists(args.codebook_dir):
             os.makedirs(args.codebook_dir)
         codebook_list.append(args.codebook_dir+'{}.pth'.format(obj))
@@ -289,7 +295,8 @@ if __name__ == '__main__':
     dataloader = torch.utils.data.DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=0)
 
     # setup the poserbpf
-    pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, object_category, modality='rgbd', cad_model_dir=args.cad_dir)
+    pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, 
+        object_category, modality=args.modality, cad_model_dir=args.cad_dir, gpu_id=args.gpu_id)
 
     if args.refine:
         print('loading SDFs')
@@ -301,12 +308,20 @@ if __name__ == '__main__':
         reg_rot = 10.0
         sdf_optimizer = sdf_multiple_optimizer(obj_list, sdf_files, reg_trans, reg_rot)
 
+    # output directory
+    output_dir = os.path.join('output', args.dataset_name, args.modality)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     # loop the dataset
-    visualize = True
+    visualize = False
     video_id = ''
     for sample in dataloader:
 
-        _vis_minibatch(sample, obj_list, dataset_test._class_colors)
+        # _vis_minibatch(sample, obj_list, dataset_test._class_colors)
+
+        if 'is_testing' in sample and sample['is_testing'] == 0:
+            continue
 
         # prepare data
         image_input = sample['image_color'][0]
@@ -319,6 +334,7 @@ if __name__ == '__main__':
         width = image_input.shape[1]
         height = image_input.shape[0]
         intrinsics = sample['intrinsic_matrix'][0].numpy()
+        image_id = sample['image_id'][0]
 
         # start a new video
         if video_id != sample['video_id'][0]:
@@ -327,6 +343,8 @@ if __name__ == '__main__':
             video_id = sample['video_id'][0]
             print('start video %s' % (video_id))
             print(intrinsics)
+
+        print('video %s, frame %s' % (video_id, image_id))
 
         # detection from posecnn
         rois = sample['rois_result'][0].numpy()
@@ -388,15 +406,23 @@ if __name__ == '__main__':
             obj_idx = int(roi[1])
             target_obj = pose_rbpf.obj_list[obj_idx]
             add_new_instance = True
+
+            # associate the same object, assume one instance per object
             for j in range(len(pose_rbpf.instance_list)):
                 if pose_rbpf.instance_list[j] == target_obj and pose_rbpf.rbpf_ok_list[j] == False:
+                    print('initialize previous object: %s' % (target_obj))
                     add_new_instance = False
                     Tco, max_sim = pose_rbpf.pose_estimation_single(j, roi, image_input,
                                                                     image_depth, visualize=visualize)
             if add_new_instance:
+                print('initialize new object: %s' % (target_obj))
                 pose_rbpf.add_object_instance(target_obj)
                 Tco, max_sim = pose_rbpf.pose_estimation_single(len(pose_rbpf.instance_list)-1, roi, image_input,
                                                                 image_depth, visualize=visualize)
+
+        # save result
+        filename = os.path.join(output_dir, video_id + '_' + image_id + '.mat')
+        pose_rbpf.save_results_mat(filename)
 
         # SDF refinement for multiple objects
         if args.refine and image_label is not None:
@@ -413,4 +439,7 @@ if __name__ == '__main__':
                     index_sdf.append(i)
             if len(index_sdf) > 0:
                 pose_rbpf.pose_refine_multiple(sdf_optimizer, posecnn_classes, index_sdf, im_depth, 
-                    im_pcloud, image_label, steps=50, visualize=visualize)
+                    im_pcloud, image_label, steps=50)
+
+    # evaluation
+    dataset_test.evaluation(output_dir, args.modality)
