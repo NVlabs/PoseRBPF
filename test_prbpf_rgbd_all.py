@@ -4,15 +4,23 @@
 
 import argparse
 import matplotlib
-# matplotlib.use('Agg')
+import pprint
+import glob
+import copy
+import posecnn_cuda
+
 from pose_rbpf.pose_rbpf import *
+from pose_rbpf.sdf_multiple_optimizer import sdf_multiple_optimizer
 from datasets.ycb_video_dataset import *
 from datasets.dex_ycb_dataset import *
 from datasets.tless_dataset import *
 from config.config import cfg, cfg_from_file
-import pprint
-import glob
-import copy
+from utils.cython_bbox import bbox_overlaps
+
+posecnn_classes = ('__background__', '002_master_chef_can', '003_cracker_box', '004_sugar_box', '005_tomato_soup_can', \
+                   '006_mustard_bottle', '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', \
+                   '011_banana', '019_pitcher_base', '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', \
+                   '036_wood_block', '037_scissors', '040_large_marker', '052_extra_large_clamp', '061_foam_brick')
 
 def parse_args():
     """
@@ -56,6 +64,9 @@ def parse_args():
                         help='run as demo mode',
                         default=False,
                         type=bool)
+    parser.add_argument('--depth_refinement', dest='refine',
+                        help='sdf refinement',
+                        action='store_true')
     args = parser.parse_args()
     return args
 
@@ -91,10 +102,11 @@ def _vis_minibatch(sample, classes, class_colors):
     points = sample['points'][0, :, :].numpy()
     poses_result = sample['poses_result'].numpy()
     rois_result = sample['rois_result'].numpy()
+    labels_result = sample['labels_result'].numpy()
     video_ids = sample['video_id']
     image_ids = sample['image_id']
 
-    m = 2
+    m = 3
     n = 3
     for i in range(image.shape[0]):
         fig = plt.figure()
@@ -106,7 +118,6 @@ def _vis_minibatch(sample, classes, class_colors):
 
         # show image
         im = image[i, :, :, :].copy() * 255.0
-        im = im[:, :, (2, 1, 0)]
         im = np.clip(im, 0, 255)
         im = im.astype(np.uint8)
         ax = fig.add_subplot(m, n, 1)
@@ -172,7 +183,7 @@ def _vis_minibatch(sample, classes, class_colors):
         poses = poses_result[i]
         for j in range(rois.shape[0]):
             cls = int(rois[j, 1])
-            print('%s: detection score %s' % (classes[cls], rois[j, -1]))
+            print('%d %s: detection score %s' % (cls, classes[cls], rois[j, -1]))
 
             # extract 3D points
             x3d = np.ones((4, points.shape[1]), dtype=np.float32)
@@ -202,6 +213,14 @@ def _vis_minibatch(sample, classes, class_colors):
             y2 = rois[j, 5]
             plt.gca().add_patch(
                 plt.Rectangle((x1, y1), x2-x1, y2-y1, fill=False, edgecolor=np.divide(class_colors[cls], 255.0), linewidth=3, clip_on=False))
+
+        # show predicted label
+        im_label = labels_result[i, :, :]
+        if im_label.shape[0] > 0:
+            ax = fig.add_subplot(m, n, start)
+            start += 1
+            plt.imshow(im_label)
+            ax.set_title('posecnn labels')
 
         plt.show()
 
@@ -269,17 +288,129 @@ if __name__ == '__main__':
         dataset_test = dex_ycb_dataset(setup, split, obj_list)
     dataloader = torch.utils.data.DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=0)
 
-    # loop the dataset
-    for i, sample in enumerate(dataloader):
-
-        _vis_minibatch(sample, obj_list, dataset_test._class_colors)
-
     # setup the poserbpf
     pose_rbpf = PoseRBPF(obj_list, cfg_list, checkpoint_list, codebook_list, object_category, modality='rgbd', cad_model_dir=args.cad_dir)
 
-    target_obj = cfg.TEST.OBJECTS[0]
-    pose_rbpf.add_object_instance(target_obj)
-    target_cfg = pose_rbpf.set_target_obj(0)
+    if args.refine:
+        print('loading SDFs')
+        sdf_files = []
+        for cls in obj_list:
+            sdf_file = '{}/ycb_models/{}/textured_simple_low_res.pth'.format(args.cad_dir, cls)
+            sdf_files.append(sdf_file)
+        reg_trans = 1000.0
+        reg_rot = 10.0
+        sdf_optimizer = sdf_multiple_optimizer(obj_list, sdf_files, reg_trans, reg_rot)
 
+    # loop the dataset
+    visualize = True
+    video_id = ''
+    for sample in dataloader:
 
-    pose_rbpf.run_dataset(dataset_test, args.n_seq, only_track_kf=False, kf_skip=1, demo=args.demo)
+        _vis_minibatch(sample, obj_list, dataset_test._class_colors)
+
+        # prepare data
+        image_input = sample['image_color'][0]
+        image_depth = sample['image_depth'][0]
+        image_label = sample['labels_result'][0].cuda()
+        if image_label.shape[0] == 0:
+            image_label = None
+        im_depth = image_depth.cuda().float()
+        image_depth = image_depth.unsqueeze(2)
+        width = image_input.shape[1]
+        height = image_input.shape[0]
+        intrinsics = sample['intrinsic_matrix'][0].numpy()
+
+        # start a new video
+        if video_id != sample['video_id'][0]:
+            pose_rbpf.reset_poserbpf()
+            pose_rbpf.set_intrinsics(intrinsics, width, height)
+            video_id = sample['video_id'][0]
+            print('start video %s' % (video_id))
+            print(intrinsics)
+
+        # detection from posecnn
+        rois = sample['rois_result'][0].numpy()
+
+        # collect rois from rbpfs
+        rois_rbpf = np.zeros((0, 6), dtype=np.float32)
+        index_rbpf = []
+        for i in range(len(pose_rbpf.instance_list)):
+            if pose_rbpf.rbpf_ok_list[i]:
+                roi = pose_rbpf.rbpf_list[i].roi
+                rois_rbpf = np.concatenate((rois_rbpf, roi), axis=0)
+                index_rbpf.append(i)
+                pose_rbpf.rbpf_list[i].roi_assign = None
+
+        # data association based on bounding box overlap
+        num_rois = rois.shape[0]
+        num_rbpfs = rois_rbpf.shape[0]
+        assigned_rois = np.zeros((num_rois, ), dtype=np.int32)
+        if num_rbpfs > 0 and num_rois > 0:
+            # overlaps: (rois x gt_boxes) (batch_id, x1, y1, x2, y2)
+            overlaps = bbox_overlaps(np.ascontiguousarray(rois_rbpf[:, (1, 2, 3, 4, 5)], dtype=np.float),
+                np.ascontiguousarray(rois[:, (1, 2, 3, 4, 5)], dtype=np.float))
+
+            # assign rois to rbpfs
+            assignment = overlaps.argmax(axis=1)
+            max_overlaps = overlaps.max(axis=1)
+            unassigned = []
+            for i in range(num_rbpfs):
+                if max_overlaps[i] > 0.2:
+                    pose_rbpf.rbpf_list[index_rbpf[i]].roi_assign = rois[assignment[i]]
+                    assigned_rois[assignment[i]] = 1
+                else:
+                    unassigned.append(i)
+
+            # check if there are un-assigned rois
+            index = np.where(assigned_rois == 0)[0]
+
+            # if there is un-assigned rbpfs
+            if len(unassigned) > 0 and len(index) > 0:
+                for i in range(len(unassigned)):
+                    for j in range(len(index)):
+                        if assigned_rois[index[j]] == 0 and pose_rbpf.rbpf_list[index_rbpf[unassigned[i]]].roi[0, 1] == rois[index[j], 1]:
+                            pose_rbpf.rbpf_list[index_rbpf[unassigned[i]]].roi_assign = rois[index[j]]
+                            assigned_rois[index[j]] = 1
+        elif num_rbpfs == 0 and num_rois == 0:
+            continue
+
+        # filter tracked objects
+        for i in range(len(pose_rbpf.instance_list)):
+            if pose_rbpf.rbpf_ok_list[i]:
+                roi = pose_rbpf.rbpf_list[i].roi_assign
+                Tco, max_sim = pose_rbpf.pose_estimation_single(i, roi, image_input, image_depth, visualize=visualize)
+
+        # initialize new object
+        for i in range(num_rois):
+            if assigned_rois[i]:
+                continue
+            roi = rois[i]
+            obj_idx = int(roi[1])
+            target_obj = pose_rbpf.obj_list[obj_idx]
+            add_new_instance = True
+            for j in range(len(pose_rbpf.instance_list)):
+                if pose_rbpf.instance_list[j] == target_obj and pose_rbpf.rbpf_ok_list[j] == False:
+                    add_new_instance = False
+                    Tco, max_sim = pose_rbpf.pose_estimation_single(j, roi, image_input,
+                                                                    image_depth, visualize=visualize)
+            if add_new_instance:
+                pose_rbpf.add_object_instance(target_obj)
+                Tco, max_sim = pose_rbpf.pose_estimation_single(len(pose_rbpf.instance_list)-1, roi, image_input,
+                                                                image_depth, visualize=visualize)
+
+        # SDF refinement for multiple objects
+        if args.refine and image_label is not None:
+            # backproject depth
+            fx = intrinsics[0, 0]
+            fy = intrinsics[1, 1]
+            px = intrinsics[0, 2]
+            py = intrinsics[1, 2]
+            im_pcloud = posecnn_cuda.backproject_forward(fx, fy, px, py, im_depth)[0]
+
+            index_sdf = []
+            for i in range(len(pose_rbpf.instance_list)):
+                if pose_rbpf.rbpf_ok_list[i]:
+                    index_sdf.append(i)
+            if len(index_sdf) > 0:
+                pose_rbpf.pose_refine_multiple(sdf_optimizer, posecnn_classes, index_sdf, im_depth, 
+                    im_pcloud, image_label, steps=50, visualize=visualize)

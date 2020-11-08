@@ -299,14 +299,14 @@ class dex_ycb_dataset(data.Dataset):
         im_color, im_depth = self._get_image_blob(roidb['color_file'], roidb['depth_file'])
 
         # build the label blob
-        im_label, intrinsic_matrix, poses, gt_boxes, poses_result, rois_result \
+        im_label, intrinsic_matrix, poses, gt_boxes, poses_result, rois_result, labels_result \
             = self._get_label_blob(roidb, self._num_classes)
 
         is_syn = 0
         im_scale = 1.0
         im_info = np.array([im_color.shape[1], im_color.shape[2], im_scale, is_syn], dtype=np.float32)
 
-        sample = {'image_color': im_color,
+        sample = {'image_color': im_color[:, :, (2, 1, 0)],
                   'image_depth': im_depth,
                   'label': im_label,
                   'intrinsic_matrix': intrinsic_matrix,
@@ -314,6 +314,7 @@ class dex_ycb_dataset(data.Dataset):
                   'gt_boxes': gt_boxes,
                   'poses_result': poses_result,
                   'rois_result': rois_result,
+                  'labels_result': labels_result,
                   'extents': self._extents,
                   'points': self._points_all,
                   'im_info': im_info,
@@ -409,6 +410,7 @@ class dex_ycb_dataset(data.Dataset):
             poses_result[:, 1] = result['rois'][:, 1]
             poses_result[:, 2:] = result['poses']
             rois_result = result['rois'].copy()
+            labels_result = result['labels'].copy()
 
             # select the classes
             index = []
@@ -425,9 +427,10 @@ class dex_ycb_dataset(data.Dataset):
             print('no posecnn result %s' % (roidb['posecnn']))
             poses_result = np.zeros((0, 9), dtype=np.float32)
             rois_result = np.zeros((0, 7), dtype=np.float32)
+            labels_result = np.zeros((0, 1), dtype=np.float32)
 
         poses = poses.transpose((1, 2, 0))
-        return im_label, intrinsic_matrix, poses, gt_boxes, poses_result, rois_result
+        return im_label, intrinsic_matrix, poses, gt_boxes, poses_result, rois_result, labels_result
 
 
     def _get_default_path(self):

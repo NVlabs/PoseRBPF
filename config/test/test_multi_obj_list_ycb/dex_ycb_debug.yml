@@ -1,0 +1,6 @@
+TEST:
+  OBJECTS: !!python/tuple [
+    '002_master_chef_can',
+    '003_cracker_box',
+    '025_mug',
+                           ]

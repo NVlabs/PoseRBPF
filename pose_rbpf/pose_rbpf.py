@@ -296,6 +296,14 @@ class PoseRBPF:
         self.mope_Tbo_list.append(np.eye(4, dtype=np.float32))
         self.mope_pc_b_list.append(None)
 
+    # reset
+    def reset_poserbpf(self):
+        self.rbpf_list = []
+        self.rbpf_ok_list = []
+        self.instance_list = []
+        self.mope_Tbo_list = []
+        self.mope_pc_b_list = []
+
     # specify the target object for tracking
     def set_target_obj(self, target_instance_idx):
         target_object = self.instance_list[target_instance_idx]
@@ -407,10 +415,11 @@ class PoseRBPF:
     def set_intrinsics(self, intrinsics, w, h):
         self.intrinsics = intrinsics
         self.data_intrinsics = intrinsics
-        self.target_obj_cfg.PF.FU = self.intrinsics[0, 0]
-        self.target_obj_cfg.PF.FV = self.intrinsics[1, 1]
-        self.target_obj_cfg.PF.U0 = self.intrinsics[0, 2]
-        self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
+        if self.target_obj_cfg is not None:
+            self.target_obj_cfg.PF.FU = self.intrinsics[0, 0]
+            self.target_obj_cfg.PF.FV = self.intrinsics[1, 1]
+            self.target_obj_cfg.PF.U0 = self.intrinsics[0, 2]
+            self.target_obj_cfg.PF.V0 = self.intrinsics[1, 2]
         if self.renderer.renderer is not None:
             self.renderer.set_intrinsics(self.intrinsics, w, h)
 
@@ -1037,9 +1046,12 @@ class PoseRBPF:
                 print('Estimating {}, rgb sim = {}, depth sim = {}'.format(self.instance_list[target_instance_idx], self.max_sim_rgb, self.max_sim_depth))
 
         if visualize:
+            print(self.data_intrinsics)
+            print(self.rbpf_list[target_instance_idx].trans_bar)
+            print(self.rbpf_list[target_instance_idx].rot_bar)
             render_rgb, render_depth = self.renderer.render_pose(self.data_intrinsics,
-                                                                 self.rbpf_list[self.target_obj_idx].trans_bar,
-                                                                 self.rbpf_list[self.target_obj_idx].rot_bar,
+                                                                 self.rbpf_list[target_instance_idx].trans_bar,
+                                                                 self.rbpf_list[target_instance_idx].rot_bar,
                                                                  self.target_obj_idx)
 
             render_rgb = render_rgb[0].permute(1, 2, 0).cpu().numpy()
