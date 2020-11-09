@@ -14,7 +14,7 @@ TRAIN:
   TRANS_SEP: False
   DEEPER_TRANSNET: True
   ONLINE_RENDERING: True
-  RENDER_DIST: !!python/tuple [1.2796905]
+  RENDER_DIST: !!python/tuple [2.5]
   LIGHT_INT_MIN: 0.3
   LIGHT_INT_MAX: 3.0
   LIGHT_COLOR_VAR: 0.8

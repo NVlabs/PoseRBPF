@@ -24,6 +24,7 @@ class tless_multi_render_dataset(torch.utils.data.Dataset):
                  target_size=128,
                  chrom_rand_level=cfg.TRAIN.CHM_RAND_LEVEL):
 
+        self._name = 'tless_syn'
         self.render_size = render_size
         self.renderer = renderer
 
@@ -343,9 +344,3 @@ class tless_codebook_online_generator(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.pose_list)
-
-
-
-
-
-

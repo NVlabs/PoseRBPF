@@ -5,4 +5,6 @@ python3 train_aae.py \
   --obj 002_master_chef_can \
   --epochs 200 \
   --save 50 \
-  --modality rgb
+  --modality rgb \
+  --dis_dir data/coco/train2014/train2014 \
+  --dataset dex_ycb_s2_train \

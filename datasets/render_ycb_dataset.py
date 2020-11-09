@@ -299,6 +299,7 @@ class ycb_multi_render_dataset(torch.utils.data.Dataset):
                  target_size=128,
                  chrom_rand_level=cfg.TRAIN.CHM_RAND_LEVEL):
 
+        self._name = 'ycb_syn'
         self.render_size = render_size
         self.renderer = renderer
 

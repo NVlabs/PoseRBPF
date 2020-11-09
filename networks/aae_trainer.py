@@ -99,7 +99,7 @@ class aae_trainer(nn.Module):
         if ckpt_path is not None:
             self.load_ckpt(ckpt_path=ckpt_path)
 
-    def set_log_dir(self, model_path=None, now=None):
+    def set_log_dir(self, dataset_name='', model_path=None, now=None, ):
         # Set date and epoch counter as if starting a new model
         self.epoch = 0
         if now == None:
@@ -114,8 +114,8 @@ class aae_trainer(nn.Module):
                                         int(m.group(4)), int(m.group(5)), int(m.group(6)))
 
         # Directory for training logs
-        self.log_dir = os.path.join(self.ckpt_dir, "{}{:%Y%m%dT%H%M%S}_{}_{}".format(
-            self.obj_ctg, now, self.object_names[0], self.cfg_all.EXP_NAME))
+        self.log_dir = os.path.join(self.ckpt_dir, "{}_{:%Y%m%dT%H%M%S}_{}_{}".format(
+            dataset_name, now, self.object_names[0], self.cfg_all.EXP_NAME))
         # Path to save after each epoch. Include placeholders that get filled by Keras.
         self.checkpoint_path = os.path.join(self.log_dir, "ckpt_{}_*epoch*.pth".format(
             self.obj_ctg))
@@ -177,7 +177,7 @@ class aae_trainer(nn.Module):
         print('train set size {}'.format(len(train_set)))
 
         if self.log_dir == None:
-            self.set_log_dir()
+            self.set_log_dir(dataset_name=train_dataset._name)
             if not os.path.exists(self.log_dir) and save_frequency > 0:
                 print('Create folder at {}'.format(self.log_dir))
                 os.makedirs(self.log_dir)
@@ -359,7 +359,7 @@ class aae_trainer(nn.Module):
 
         return loss_sum_rgb, loss_sum_depth
 
-    def train_epoch_rgb(self, datagenerator, optimizer, steps, epoch, total_epoch, dstrgenerator=None, visualize=True):
+    def train_epoch_rgb(self, datagenerator, optimizer, steps, epoch, total_epoch, dstrgenerator=None, visualize=False):
         loss_sum_rgb = 0
         loss_sum_depth = 0
         step = 0
@@ -413,9 +413,11 @@ class aae_trainer(nn.Module):
                 mask_disp = mask[0].permute(1, 2, 0).repeat(1, 1, 3).cpu().numpy()
                 plt.figure()
                 plt.subplot(2, 2, 1)
-                plt.imshow(np.concatenate((image_disp, mask_disp), axis=1))
+                im = np.concatenate((image_disp, mask_disp), axis=1)
+                im = np.clip(im * 255, 0, 255).astype(np.uint8)
+                plt.imshow(im)
                 plt.subplot(2, 2, 2)
-                plt.imshow(image_target_disp)
+                plt.imshow(np.clip(image_target_disp * 255, 0, 255).astype(np.uint8))
                 plt.subplot(2, 2, 3)
                 plt.imshow(depth_disp)
                 plt.subplot(2, 2, 4)

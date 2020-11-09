@@ -10,11 +10,14 @@ import argparse
 from datasets.render_ycb_dataset import *
 from datasets.render_tless_dataset import *
 from datasets.ycb_video_dataset import *
+from datasets.dex_ycb_encoder_dataset import *
+from datasets.concat_dataset import ConcatDataset
 from networks.aae_trainer import *
 from ycb_render.ycb_renderer import *
 from ycb_render.tless_renderer_tensor import *
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
 import pprint
+
 
 def parse_args():
     """
@@ -49,6 +52,9 @@ def parse_args():
     parser.add_argument('--modality', dest='modality',
                         help='modality: rgb or rgbd',
                         default='rgbd', type=str)
+    parser.add_argument('--dataset', dest='dataset_name',
+                        help='dataset to train on',
+                        default='', type=str)
 
     args = parser.parse_args()
     return args
@@ -89,7 +95,7 @@ if __name__ == '__main__':
         texture_paths = ['{}/ycb_models/{}/texture_map.png'.format(model_path, item) for item in models]
         renderer.load_objects(obj_paths, texture_paths)
         renderer.set_projection_matrix(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ, fu=cfg.TRAIN.FU, 
-            fv=cfg.TRAIN.FU, u0=cfg.TRAIN.U0, v0=cfg.TRAIN.V0, znear=0.01, zfar=10)
+            fv=cfg.TRAIN.FV, u0=cfg.TRAIN.U0, v0=cfg.TRAIN.V0, znear=0.01, zfar=10)
     elif args.obj_ctg == 'tless':
         renderer = TLessTensorRenderer(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ)
         if cfg.TRAIN.USE_OCCLUSION:
@@ -109,12 +115,12 @@ if __name__ == '__main__':
         obj_paths = ['{}/tless_models/{}.ply'.format(model_path, item) for item in models]
         texture_paths = ['' for cls in models]
         renderer.load_objects(obj_paths, texture_paths, class_colors_all)
-        renderer.set_projection_matrix(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ, cfg.TRAIN.FU, cfg.TRAIN.FU,
+        renderer.set_projection_matrix(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ, cfg.TRAIN.FU, cfg.TRAIN.FV,
                                        cfg.TRAIN.RENDER_SZ/2.0, cfg.TRAIN.RENDER_SZ/2.0, 0.01, 10)
     renderer.set_camera_default()
     renderer.set_light_pos([0, 0, 0])
 
-    # dataset
+    # synthetic dataset
     if args.obj_ctg == 'ycb':
         dataset_train = ycb_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS, renderer,
                                                  render_size=cfg.TRAIN.RENDER_SZ,
@@ -123,6 +129,16 @@ if __name__ == '__main__':
         dataset_train = tless_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS, renderer,
                                                  render_size=cfg.TRAIN.RENDER_SZ,
                                                  output_size=cfg.TRAIN.INPUT_IM_SIZE)
+
+    # real dataset
+    if args.dataset_name != '':
+        if 'dex_ycb' in args.dataset_name:
+            names = args.dataset_name.split('_')
+            setup = names[-2]
+            split = names[-1]
+            print(setup, split)
+            dataset_real = dex_ycb_encoder_dataset(setup, split, cfg.TRAIN.OBJECTS, renderer)
+            dataset_train = ConcatDataset(dataset_train, dataset_real)
 
     dataset_dis = DistractorDataset(args.dis_dir, cfg.TRAIN.CHM_RAND_LEVEL,
                                     size_crop=(cfg.TRAIN.INPUT_IM_SIZE[1],
