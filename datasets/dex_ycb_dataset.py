@@ -479,7 +479,7 @@ class dex_ycb_dataset(data.Dataset):
 
     def write_dop_results(self, output_dir, modality):
         # only write the result file
-        filename = os.path.join(output_dir, 'poserbpf_' + self.name + '_' + modality + '.csv')
+        filename = os.path.join(output_dir, 'poserbpf_' + self._name + '_' + modality + '.csv')
         f = open(filename, 'w')
         f.write('scene_id,im_id,obj_id,score,R,t,time\n')
 

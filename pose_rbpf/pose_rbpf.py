@@ -960,8 +960,8 @@ class PoseRBPF:
                                                        mask=mask, initialization=False)
         else:
             est_pdf_matrix = self.evaluate_particles_rgb(image, self.rbpf.uv, self.rbpf.z,
-                                                          self.target_obj_cfg.TRAIN.RENDER_DIST[0],
-                                                          self.target_obj_cfg.PF.WT_RESHAPE_VAR,
+                                                         self.target_obj_cfg.TRAIN.RENDER_DIST[0],
+                                                         self.target_obj_cfg.PF.WT_RESHAPE_VAR,
                                                          depth=depth,
                                                          initialization=False)
 

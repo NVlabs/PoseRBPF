@@ -313,6 +313,7 @@ if __name__ == '__main__':
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    #'''
     # loop the dataset
     visualize = False
     video_id = ''
@@ -325,12 +326,15 @@ if __name__ == '__main__':
 
         # prepare data
         image_input = sample['image_color'][0]
-        image_depth = sample['image_depth'][0]
+        if args.modality == 'rgb':
+            image_depth = None
+        else:
+            image_depth = sample['image_depth'][0]
+            im_depth = image_depth.cuda().float()
+            image_depth = image_depth.unsqueeze(2)
         image_label = sample['labels_result'][0].cuda()
         if image_label.shape[0] == 0:
             image_label = None
-        im_depth = image_depth.cuda().float()
-        image_depth = image_depth.unsqueeze(2)
         width = image_input.shape[1]
         height = image_input.shape[0]
         intrinsics = sample['intrinsic_matrix'][0].numpy()
@@ -421,8 +425,9 @@ if __name__ == '__main__':
                                                                 image_depth, visualize=visualize)
 
         # save result
-        filename = os.path.join(output_dir, video_id + '_' + image_id + '.mat')
-        pose_rbpf.save_results_mat(filename)
+        if not visualize:
+            filename = os.path.join(output_dir, video_id + '_' + image_id + '.mat')
+            pose_rbpf.save_results_mat(filename)
 
         # SDF refinement for multiple objects
         if args.refine and image_label is not None:
@@ -440,6 +445,11 @@ if __name__ == '__main__':
             if len(index_sdf) > 0:
                 pose_rbpf.pose_refine_multiple(sdf_optimizer, posecnn_classes, index_sdf, im_depth, 
                     im_pcloud, image_label, steps=50)
+    #'''
+
+    filename = os.path.join(output_dir, 'results_poserbpf.mat')
+    if os.path.exists(filename):
+        os.remove(filename)
 
     # evaluation
     dataset_test.evaluation(output_dir, args.modality)

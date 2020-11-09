@@ -189,6 +189,7 @@ class particle_filter():
     def resample_ddpf(self, codepose, intrinsics, cfg_pf):
 
         if np.isnan(np.sum(self.weights)):
+            print('NaN in weights resample')
             self.weights = np.random.random_sample(self.weights.shape)
             self.weights /= np.sum(self.weights)
 
@@ -218,9 +219,9 @@ class particle_filter():
         self.delta_rot = axangle2mat(d_axis, cfg_pf.MOTION_R_FACTOR * d_angle)
         q_mean = weightedAverageQuaternions_star_numba(q_rot,
                                                        mat2quat(np.matmul(self.delta_rot, self.rot_bar)),
-                                                         rot_wt,
-                                                         cfg_pf.ROT_RANGE,
-                                                         self.rot_var)
+                                                       rot_wt,
+                                                       cfg_pf.ROT_RANGE,
+                                                       self.rot_var)
         self.delta_rot = np.matmul(quat2mat(q_mean), np.transpose(self.rot_bar))
         self.rot_bar = quat2mat(q_mean)
 
