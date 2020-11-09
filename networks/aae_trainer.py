@@ -204,11 +204,11 @@ class aae_trainer(nn.Module):
                                                                           dstrgenerator=train_dstr_generator)
                 self.loss_history_recon.append(recon_loss_rgb + recon_loss_train)
 
-            # else:  # todo: combine with fast poserbpf
-            #     recon_loss_train, trans_loss_train = self.train_epoch(train_generator, self.optimizer,
-            #                             train_steps, epoch, self.start_epoch+epochs-1,
-            #                             dstrgenerator=train_dstr_generator,
-            #                             prgenerator=None)
+            else:
+                recon_loss_rgb, recon_loss_train = self.train_epoch_rgb(train_generator, self.optimizer,
+                                        train_steps, epoch, self.start_epoch+epochs-1,
+                                        dstrgenerator=train_dstr_generator)
+                self.loss_history_recon.append(recon_loss_rgb + recon_loss_train)
 
 
             self.plot_loss(self.loss_history_recon, 'recon loss', save=True, log_dir=self.log_dir)
@@ -351,6 +351,117 @@ class aae_trainer(nn.Module):
                 depth_recon = images_recnst[0, 3].detach().cpu().numpy()
                 image_recon = images_recnst[0, :3].detach().permute(1, 2, 0).cpu().numpy()
                 disp = (image, image_target, image_recon, depth, depth_target, depth_recon)
+                self.plot_comparison(disp, str(step))
+
+            if step==steps-1:
+                break
+            step += 1
+
+        return loss_sum_rgb, loss_sum_depth
+
+    def train_epoch_rgb(self, datagenerator, optimizer, steps, epoch, total_epoch, dstrgenerator=None):
+        loss_sum_rgb = 0
+        loss_sum_depth = 0
+        step = 0
+        optimizer.zero_grad()
+
+        if dstrgenerator != None:
+            enum_dstrgenerator = enumerate(dstrgenerator)
+
+        for inputs in datagenerator:
+
+            # receiving data from the renderer
+            images, images_target, pose_cam, mask,\
+            translation_target, scale_target, \
+            affine_target, roi_center, roi_size, roi_affine, depths, depths_target = inputs
+
+            if self.use_GPU:
+                images = images.cuda()
+                images_target = images_target.cuda()
+                mask = mask.cuda()
+                roi_affine = roi_affine.cuda()
+                roi_center = roi_center.cuda().float()
+                roi_size = roi_size.cuda().float()
+
+            # warp the images according to the center and size of rois
+            grids = F.affine_grid(roi_affine, images.size())
+            images = F.grid_sample(images, grids)
+            depths = F.grid_sample(depths, grids)
+            mask = F.grid_sample(mask, grids)
+            mask = 1 - mask
+
+            # add random background and gaussian noise
+            if dstrgenerator != None:
+                _, images_dstr = next(enum_dstrgenerator)
+                if images_dstr.size(0) != images.size(0):
+                    enum_dstrgenerator = enumerate(dstrgenerator)
+                    _, images_dstr = next(enum_dstrgenerator)
+                if self.use_GPU:
+                    images_dstr = images_dstr.cuda()
+                images = images + mask * images_dstr
+            noise_level = np.random.uniform(0, 0.05)
+            images += torch.randn_like(images) * noise_level
+
+            class_info = torch.ones((images.size(0), 1, 128, 128), dtype=torch.float32).cuda()
+
+            # # visualization for debugging
+            # roi_info_copy2 = roi_info.clone()
+            # images_roi = ROIAlign((128, 128), 1.0, 0)(images, roi_info_copy)
+            # images_roi_disp = images_roi[0].permute(1, 2, 0).cpu().numpy()
+            # depth_roi = ROIAlign((128, 128), 1.0, 0)(depths, roi_info_copy2)
+            # depth_roi_disp = depth_roi[0, 0].cpu().numpy()
+            # image_disp = images[0].permute(1, 2, 0).cpu().numpy()
+            # depth_disp = depths[0, 0].cpu().numpy()
+            # depth_target_disp = depths_target[0, 0].cpu().numpy()
+            # mask_disp = mask[0].permute(1, 2, 0).repeat(1, 1, 3).cpu().numpy()
+            # plt.figure()
+            # plt.subplot(2, 3, 1)
+            # plt.imshow(np.concatenate((image_disp, mask_disp), axis=1))
+            # plt.subplot(2, 3, 2)
+            # plt.imshow(images_roi_disp)
+            # plt.subplot(2, 3, 3)
+            # plt.imshow(images_target[0].permute(1, 2, 0).cpu().numpy())
+            # plt.subplot(2, 3, 4)
+            # plt.imshow(depth_disp)
+            # plt.subplot(2, 3, 5)
+            # plt.imshow(depth_roi_disp)
+            # plt.subplot(2, 3, 6)
+            # plt.imshow(depth_target_disp)
+            # plt.show()
+
+            # AAE forward pass
+            images_input = torch.cat((images, class_info), dim=1)
+            outputs = self.AAE.forward(images_input)
+            images_recnst = outputs[0]
+            loss_reconstr = self.AAE.B_loss(images_recnst[:, :3, :, :], images_target.detach())
+            loss = loss_reconstr
+
+            loss_aae_rgb_data = loss_reconstr.data.cpu().item()
+            loss_aae_depth_data = 0
+
+            # AAE backward pass
+            optimizer.zero_grad()
+            try:
+                loss.backward()
+            except:
+                pass
+
+            optimizer.step()
+
+            printProgressBar(step + 1, steps, prefix="\t{}/{}: {}/{}".format(epoch, total_epoch, step + 1, steps),
+                             suffix="Complete [Training] - loss_rgb: {:.4f}, loss depth: {:.4f}". \
+                             format(loss_aae_rgb_data, loss_aae_depth_data), length=10)
+
+            loss_sum_rgb += loss_aae_rgb_data / steps
+            loss_sum_depth += loss_aae_depth_data / steps
+
+            # display
+            plot_n_comparison = 20
+            if step < plot_n_comparison:
+                image = images[0].detach().permute(1, 2, 0).cpu().numpy()
+                image_target = images_target[0].permute(1, 2, 0).cpu().numpy()
+                image_recon = images_recnst[0, :3].detach().permute(1, 2, 0).cpu().numpy()
+                disp = (image, image_target, image_recon)
                 self.plot_comparison(disp, str(step))
 
             if step==steps-1:

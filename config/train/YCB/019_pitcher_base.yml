@@ -1,17 +1,15 @@
 EXP_DIR: ycb_dataset
 CODE_DIM: 128
 CAPACITY: 1
-GPU_ID: 1
 TRAIN:
-  DEPTH_EMBEDDING: True
-  OBJECTS: !!python/tuple ['037_scissors']
+  OBJECTS: !!python/tuple ['019_pitcher_base']
   BOOTSTRAP_CONST: 2000
   USE_TRIPLET_LOSS: False
   WORKERS: 0
   TRANS_SEP: False
   DEEPER_TRANSNET: True
   ONLINE_RENDERING: True
-  RENDER_DIST: !!python/tuple [2.25]
+  RENDER_DIST: !!python/tuple [2.7]
   LIGHT_INT_MIN: 0.3
   LIGHT_INT_MAX: 3.0
   LIGHT_COLOR_VAR: 0.8
@@ -22,11 +20,12 @@ TRAIN:
   SHIFT_MAX: 5.0
   SCALE_MIN: 0.975
   SCALE_MAX: 1.025
-  OC_PROB: 0.5
+  OC_PROB: 0.4
   N_OCCLUDERS: 3
-  OC_XY_RANGE: !!python/tuple [-0.1, 0.1]
-  OC_Z_RANGE: !!python/tuple [0, 0.3]
   TRUNC_PROB: 0.1
   TRUNC_X_MAX: 1.0
   TRUNC_Y_MAX: 1.0
   TRIPLET_LOSS_WT: 1.0
+  ROI_CENTER_RANGE: [59.0, 69.0, 59.0, 69.0]
+  ROI_SIZE_RANGE: [124.8, 131.2]
+  USE_OCCLUSION: True

@@ -1,13 +1,8 @@
 EXP_DIR: ycb_dataset
 CODE_DIM: 128
 CAPACITY: 1
-GPU_ID: 1
 TRAIN:
-  TRAIN_TRANSNET: False
-  TRAIN_AAE: True
-  NORMALIZE_DEPTH: True
-  DEPTH_EMBEDDING: True
-  OBJECTS: !!python/tuple ['010_potted_meat_can']
+  OBJECTS: !!python/tuple ['005_tomato_soup_can']
   BOOTSTRAP_CONST: 2000
   USE_TRIPLET_LOSS: False
   WORKERS: 0
@@ -20,6 +15,7 @@ TRAIN:
   LIGHT_COLOR_VAR: 0.8
   LIGHT_R_MAX: 3.0
   LIGHT_R_MIN: 0.25
+  TRANSNET_CAPACITY: !!python/tuple [10, 20, 32]
   SHIFT_MIN: -5.0
   SHIFT_MAX: 5.0
   SCALE_MIN: 0.975
@@ -29,3 +25,6 @@ TRAIN:
   TRUNC_PROB: 0.1
   TRUNC_X_MAX: 1.0
   TRUNC_Y_MAX: 1.0
+  ROI_CENTER_RANGE: [59.0, 69.0, 59.0, 69.0]
+  ROI_SIZE_RANGE: [124.8, 131.2]
+  USE_OCCLUSION: True

@@ -973,7 +973,7 @@ class PoseRBPF:
 
         # match rotation distribution
         self.rbpf.rot = torch.clamp(self.rbpf.rot, 1e-5, 1)
-        rot_dist = torch.exp(torch.add(torch.log(est_pdf_matrix), torch.log(self.rbpf.rot.view(self.rbpf.n_particles, -1))))
+        rot_dist = torch.exp(torch.add(torch.log(est_pdf_matrix + 1e-8), torch.log(self.rbpf.rot.view(self.rbpf.n_particles, -1))))
         normalizers = torch.sum(rot_dist, dim=1)
 
         normalizers_cpu = normalizers.cpu().numpy()

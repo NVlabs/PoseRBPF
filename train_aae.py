@@ -44,6 +44,9 @@ def parse_args():
                         help='relative dir of the distration set',
                         default='../coco/val2017',
                         type=str)
+    parser.add_argument('--modality', dest='modality',
+                        help='modality: rgb or rgbd',
+                        default='rgbd', type=str)
 
     args = parser.parse_args()
     return args
@@ -85,7 +88,7 @@ if __name__ == '__main__':
 
     trainer = aae_trainer(cfg_path=cfg_file,
                           object_names=cfg.TRAIN.OBJECTS,
-                          modality='rgbd',
+                          modality=args.modality,
                           aae_capacity=cfg.CAPACITY,
                           aae_code_dim=cfg.CODE_DIM,
                           ckpt_path=args.pretrained,
@@ -96,7 +99,8 @@ if __name__ == '__main__':
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         trainer.AAE.encoder = nn.DataParallel(trainer.AAE.encoder)
         trainer.AAE.decoder = nn.DataParallel(trainer.AAE.decoder)
-        trainer.AAE.depth_decoder = nn.DataParallel(trainer.AAE.depth_decoder)
+        if args.modality == 'rgbd':
+            trainer.AAE.depth_decoder = nn.DataParallel(trainer.AAE.depth_decoder)
 
     trainer.train_model(dataset_train,
                           epochs=args.epochs,

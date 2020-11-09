@@ -1,18 +1,15 @@
 EXP_DIR: ycb_dataset
 CODE_DIM: 128
 CAPACITY: 1
-GPU_ID: 1
 TRAIN:
-  TRAIN_TRANSNET: True
-  TRAIN_AAE: True
-  OBJECTS: !!python/tuple ['002_master_chef_can']
+  OBJECTS: !!python/tuple ['009_gelatin_box']
   BOOTSTRAP_CONST: 2000
   USE_TRIPLET_LOSS: False
   WORKERS: 0
   TRANS_SEP: False
   DEEPER_TRANSNET: True
   ONLINE_RENDERING: True
-  RENDER_DIST: !!python/tuple [1.75]
+  RENDER_DIST: !!python/tuple [1.0]
   LIGHT_INT_MIN: 0.3
   LIGHT_INT_MAX: 3.0
   LIGHT_COLOR_VAR: 0.8
@@ -25,10 +22,10 @@ TRAIN:
   SCALE_MAX: 1.025
   OC_PROB: 0.4
   N_OCCLUDERS: 3
-  OC_XY_RANGE: !!python/tuple [-0.1, 0.1]
-  OC_Z_RANGE: !!python/tuple [0, 0.2]
   TRUNC_PROB: 0.1
   TRUNC_X_MAX: 1.0
   TRUNC_Y_MAX: 1.0
   TRIPLET_LOSS_WT: 1.0
-  USE_PHOTO_REALISTIC_DATA: False
+  ROI_CENTER_RANGE: [59.0, 69.0, 59.0, 69.0]
+  ROI_SIZE_RANGE: [124.8, 131.2]
+  USE_OCCLUSION: True

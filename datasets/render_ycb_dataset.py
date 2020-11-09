@@ -312,7 +312,6 @@ class ycb_multi_render_dataset(torch.utils.data.Dataset):
 
         # load all the models for occlusion
         self.use_occlusion = cfg.TRAIN.USE_OCCLUSION
-        self.use_occlusion = False
         if self.use_occlusion:
             with open('./datasets/ycb_video_classes.txt', 'r') as class_name_file:
                 class_names_all = class_name_file.read().split('\n')
