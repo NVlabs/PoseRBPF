@@ -11,6 +11,8 @@ from datasets.render_ycb_dataset import *
 from datasets.render_tless_dataset import *
 from datasets.ycb_video_dataset import *
 from networks.aae_trainer import *
+from ycb_render.ycb_renderer import *
+from ycb_render.tless_renderer_tensor import *
 from config.config import cfg, cfg_from_file, get_output_dir, write_selected_class_file
 import pprint
 
@@ -71,14 +73,54 @@ if __name__ == '__main__':
     print(cfg.TRAIN.RENDER_SZ)
     print(cfg.TRAIN.INPUT_IM_SIZE)
 
+    # set up render
+    model_path = './cad_models'
+    models = cfg.TRAIN.OBJECTS[:]
     if args.obj_ctg == 'ycb':
-        model_path = './cad_models'
-        dataset_train = ycb_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS,
+        renderer = YCBRenderer(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ, cfg.GPU_ID)
+        if cfg.TRAIN.USE_OCCLUSION:
+            with open('./datasets/ycb_video_classes.txt', 'r') as class_name_file:
+                class_names_all = class_name_file.read().split('\n')
+                for class_name in class_names_all:
+                    if class_name not in models:
+                        models.append(class_name)
+
+        obj_paths = ['{}/ycb_models/{}/textured_simple.obj'.format(model_path, item) for item in models]
+        texture_paths = ['{}/ycb_models/{}/texture_map.png'.format(model_path, item) for item in models]
+        renderer.load_objects(obj_paths, texture_paths)
+        renderer.set_projection_matrix(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ, fu=cfg.TRAIN.FU, 
+            fv=cfg.TRAIN.FU, u0=cfg.TRAIN.U0, v0=cfg.TRAIN.V0, znear=0.01, zfar=10)
+    elif args.obj_ctg == 'tless':
+        renderer = TLessTensorRenderer(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ)
+        if cfg.TRAIN.USE_OCCLUSION:
+            with open('./datasets/tless_classes.txt', 'r') as class_name_file:
+                class_names_all = class_name_file.read().split('\n')
+                for class_name in class_names_all:
+                    if class_name not in models:
+                        models.append(class_name)
+
+        class_colors_all = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255),
+                            (128, 0, 0), (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128), (0, 128, 128),
+                            (64, 0, 0), (0, 64, 0), (0, 0, 64), (64, 64, 0), (64, 0, 64), (0, 64, 64),
+                            (155, 0, 0), (0, 155, 0), (0, 0, 155), (155, 155, 0), (155, 0, 155), (0, 155, 155),
+                            (200, 0, 0), (0, 200, 0), (0, 0, 200), (200, 200, 0),
+                            (200, 0, 200), (0, 200, 200)
+                            ]
+        obj_paths = ['{}/tless_models/{}.ply'.format(model_path, item) for item in models]
+        texture_paths = ['' for cls in models]
+        renderer.load_objects(obj_paths, texture_paths, class_colors_all)
+        renderer.set_projection_matrix(cfg.TRAIN.RENDER_SZ, cfg.TRAIN.RENDER_SZ, cfg.TRAIN.FU, cfg.TRAIN.FU,
+                                       cfg.TRAIN.RENDER_SZ/2.0, cfg.TRAIN.RENDER_SZ/2.0, 0.01, 10)
+    renderer.set_camera_default()
+    renderer.set_light_pos([0, 0, 0])
+
+    # dataset
+    if args.obj_ctg == 'ycb':
+        dataset_train = ycb_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS, renderer,
                                                  render_size=cfg.TRAIN.RENDER_SZ,
                                                  output_size=cfg.TRAIN.INPUT_IM_SIZE)
     elif args.obj_ctg == 'tless':
-        model_path = './cad_models'
-        dataset_train = tless_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS,
+        dataset_train = tless_multi_render_dataset(model_path, cfg.TRAIN.OBJECTS, renderer,
                                                  render_size=cfg.TRAIN.RENDER_SZ,
                                                  output_size=cfg.TRAIN.INPUT_IM_SIZE)
 

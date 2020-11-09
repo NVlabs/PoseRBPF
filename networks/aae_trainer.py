@@ -359,7 +359,7 @@ class aae_trainer(nn.Module):
 
         return loss_sum_rgb, loss_sum_depth
 
-    def train_epoch_rgb(self, datagenerator, optimizer, steps, epoch, total_epoch, dstrgenerator=None):
+    def train_epoch_rgb(self, datagenerator, optimizer, steps, epoch, total_epoch, dstrgenerator=None, visualize=True):
         loss_sum_rgb = 0
         loss_sum_depth = 0
         step = 0
@@ -404,30 +404,23 @@ class aae_trainer(nn.Module):
 
             class_info = torch.ones((images.size(0), 1, 128, 128), dtype=torch.float32).cuda()
 
-            # # visualization for debugging
-            # roi_info_copy2 = roi_info.clone()
-            # images_roi = ROIAlign((128, 128), 1.0, 0)(images, roi_info_copy)
-            # images_roi_disp = images_roi[0].permute(1, 2, 0).cpu().numpy()
-            # depth_roi = ROIAlign((128, 128), 1.0, 0)(depths, roi_info_copy2)
-            # depth_roi_disp = depth_roi[0, 0].cpu().numpy()
-            # image_disp = images[0].permute(1, 2, 0).cpu().numpy()
-            # depth_disp = depths[0, 0].cpu().numpy()
-            # depth_target_disp = depths_target[0, 0].cpu().numpy()
-            # mask_disp = mask[0].permute(1, 2, 0).repeat(1, 1, 3).cpu().numpy()
-            # plt.figure()
-            # plt.subplot(2, 3, 1)
-            # plt.imshow(np.concatenate((image_disp, mask_disp), axis=1))
-            # plt.subplot(2, 3, 2)
-            # plt.imshow(images_roi_disp)
-            # plt.subplot(2, 3, 3)
-            # plt.imshow(images_target[0].permute(1, 2, 0).cpu().numpy())
-            # plt.subplot(2, 3, 4)
-            # plt.imshow(depth_disp)
-            # plt.subplot(2, 3, 5)
-            # plt.imshow(depth_roi_disp)
-            # plt.subplot(2, 3, 6)
-            # plt.imshow(depth_target_disp)
-            # plt.show()
+            # visualization
+            if visualize:
+                image_disp = images[0].permute(1, 2, 0).cpu().numpy()
+                image_target_disp = images_target[0].permute(1, 2, 0).cpu().numpy()
+                depth_disp = depths[0, 0].cpu().numpy()
+                depth_target_disp = depths_target[0, 0].cpu().numpy()
+                mask_disp = mask[0].permute(1, 2, 0).repeat(1, 1, 3).cpu().numpy()
+                plt.figure()
+                plt.subplot(2, 2, 1)
+                plt.imshow(np.concatenate((image_disp, mask_disp), axis=1))
+                plt.subplot(2, 2, 2)
+                plt.imshow(image_target_disp)
+                plt.subplot(2, 2, 3)
+                plt.imshow(depth_disp)
+                plt.subplot(2, 2, 4)
+                plt.imshow(depth_target_disp)
+                plt.show()
 
             # AAE forward pass
             images_input = torch.cat((images, class_info), dim=1)

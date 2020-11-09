@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 export CUDA_VISIBLE_DEVICES=$1 
 
-python3.6 test_prbpf_all.py \
+python3 test_prbpf_all.py \
   --gpu $1 \
   --modality 'rgb' \
   --test_config './config/test/test_multi_obj_list_ycb/dex_ycb.yml' \

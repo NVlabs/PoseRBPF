@@ -294,13 +294,13 @@ class DistractorDataset(data.Dataset):
         return distractor
 
 class ycb_multi_render_dataset(torch.utils.data.Dataset):
-    def __init__(self, model_dir, model_names, render_size=128,
+    def __init__(self, model_dir, model_names,  renderer, render_size=128,
                  output_size=(128, 128),
                  target_size=128,
                  chrom_rand_level=cfg.TRAIN.CHM_RAND_LEVEL):
 
         self.render_size = render_size
-        self.renderer = YCBRenderer(self.render_size, self.render_size, cfg.GPU_ID)
+        self.renderer = renderer
 
         self.h = self.render_size
         self.w = self.render_size
@@ -319,16 +319,6 @@ class ycb_multi_render_dataset(torch.utils.data.Dataset):
                     if class_name not in self.models:
                         self.models.append(class_name)
             self.n_occluder = cfg.TRAIN.N_OCCLUDERS
-
-        obj_paths = ['{}/ycb_models/{}/textured_simple.obj'.format(model_dir, item) for item in self.models]
-        texture_paths = ['{}/ycb_models/{}/texture_map.png'.format(model_dir, item) for item in self.models]
-        self.renderer.load_objects(obj_paths, texture_paths)
-
-        # renderer properties
-        self.renderer.set_camera_default()
-        self.renderer.set_projection_matrix(self.w, self.h, fu=cfg.TRAIN.FU, fv=cfg.TRAIN.FU,
-                                            u0=cfg.TRAIN.U0, v0=cfg.TRAIN.V0, znear=0.01, zfar=10)
-        self.renderer.set_light_pos([0, 0, 0])
 
         # put in the configuration file
         self.lb_shift = cfg.TRAIN.SHIFT_MIN

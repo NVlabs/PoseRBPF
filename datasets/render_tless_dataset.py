@@ -20,12 +20,12 @@ from ycb_render.tless_renderer_tensor import *
 import imgaug.augmenters as iaa
 
 class tless_multi_render_dataset(torch.utils.data.Dataset):
-    def __init__(self, model_dir, model_names, render_size=128, output_size=(128, 128),
+    def __init__(self, model_dir, model_names, renderer, render_size=128, output_size=(128, 128),
                  target_size=128,
                  chrom_rand_level=cfg.TRAIN.CHM_RAND_LEVEL):
 
         self.render_size = render_size
-        self.renderer = TLessTensorRenderer(self.render_size, self.render_size)
+        self.renderer = renderer
 
         self.h = render_size
         self.w = render_size
@@ -35,16 +35,8 @@ class tless_multi_render_dataset(torch.utils.data.Dataset):
         self.target_size = target_size
         self.use_occlusion = cfg.TRAIN.USE_OCCLUSION
 
-        class_txt = './datasets/tless_classes.txt'
-        class_colors_all = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255),
-                            (128, 0, 0), (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128), (0, 128, 128),
-                            (64, 0, 0), (0, 64, 0), (0, 0, 64), (64, 64, 0), (64, 0, 64), (0, 64, 64),
-                            (155, 0, 0), (0, 155, 0), (0, 0, 155), (155, 155, 0), (155, 0, 155), (0, 155, 155),
-                            (200, 0, 0), (0, 200, 0), (0, 0, 200), (200, 200, 0),
-                            (200, 0, 200), (0, 200, 200)
-                            ]
-
         # load all the models
+        class_txt = './datasets/tless_classes.txt'
         if self.use_occlusion:
             with open(class_txt, 'r') as class_name_file:
                 class_names_all = class_name_file.read().split('\n')
@@ -52,16 +44,6 @@ class tless_multi_render_dataset(torch.utils.data.Dataset):
                     if class_name not in self.models:
                         self.models.append(class_name)
             self.n_occluder = cfg.TRAIN.N_OCCLUDERS
-
-        obj_paths = ['{}/tless_models/{}.ply'.format(model_dir, item) for item in self.models]
-        texture_paths = ['' for cls in self.models]
-        self.renderer.load_objects(obj_paths, texture_paths, class_colors_all)
-
-        # renderer properties
-        self.renderer.set_projection_matrix(self.w, self.h, cfg.TRAIN.FU, cfg.TRAIN.FU,
-                                            render_size/2.0, render_size/2.0, 0.01, 10)
-        self.renderer.set_camera_default()
-        self.renderer.set_light_pos([0, 0, 0])
 
         # put in the configuration file
         self.lb_shift = cfg.TRAIN.SHIFT_MIN
