@@ -114,8 +114,8 @@ class aae_trainer(nn.Module):
                                         int(m.group(4)), int(m.group(5)), int(m.group(6)))
 
         # Directory for training logs
-        self.log_dir = os.path.join(self.ckpt_dir, "{}_{:%Y%m%dT%H%M%S}_{}_{}".format(
-            dataset_name, now, self.object_names[0], self.cfg_all.EXP_NAME))
+        self.log_dir = os.path.join(self.ckpt_dir, "{}_{}_{}_{:%Y%m%dT%H%M%S}".format(
+            dataset_name, self.object_names[0], self.cfg_all.EXP_NAME, now))
         # Path to save after each epoch. Include placeholders that get filled by Keras.
         self.checkpoint_path = os.path.join(self.log_dir, "ckpt_{}_*epoch*.pth".format(
             self.obj_ctg))
