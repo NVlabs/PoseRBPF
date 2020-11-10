@@ -284,6 +284,10 @@ class dex_ycb_encoder_dataset(data.Dataset):
                 offset += 1
         self._mapping = np.vstack(self._mapping)
 
+        # sample a subset for training
+        if split == 'train':
+            self._mapping = self._mapping[::10]
+
         # dataset size
         self._size = len(self._mapping)
         print('dataset %s with images %d' % (self._name, self._size))
