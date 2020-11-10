@@ -5,7 +5,7 @@
 from __future__ import division
 import matplotlib
 import matplotlib.pyplot as plt
-# matplotlib.use('Agg')
+import _init_paths
 import argparse
 from datasets.render_ycb_dataset import *
 from datasets.render_tless_dataset import *
