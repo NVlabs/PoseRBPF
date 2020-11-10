@@ -334,9 +334,8 @@ class aae_trainer(nn.Module):
 
             optimizer.step()
 
-            printProgressBar(step + 1, steps, prefix="\t{}/{}: {}/{}".format(epoch, total_epoch, step + 1, steps),
-                             suffix="Complete [Training] - loss_rgb: {:.4f}, loss depth: {:.4f}". \
-                             format(loss_aae_rgb_data, loss_aae_depth_data), length=10)
+            print("{}/{}: {}/{}, loss_rgb: {:.4f}, loss depth: {:.4f}".format(epoch, total_epoch, step + 1, int(steps), 
+                  loss_aae_rgb_data, loss_aae_depth_data))
 
             loss_sum_rgb += loss_aae_rgb_data / steps
             loss_sum_depth += loss_aae_depth_data / steps
@@ -445,10 +444,9 @@ class aae_trainer(nn.Module):
 
             optimizer.step()
 
-            printProgressBar(step + 1, steps, prefix="\t{}/{}: {}/{}".format(epoch, total_epoch, step + 1, steps),
-                             suffix="Complete [Training] - loss_rgb: {:.4f}, loss depth: {:.4f}". \
-                             format(loss_aae_rgb_data, loss_aae_depth_data), length=10)
-
+            print("{}/{}: {}/{}, loss_rgb: {:.4f}, loss depth: {:.4f}".format(epoch, total_epoch, step + 1, int(steps), 
+                  loss_aae_rgb_data, loss_aae_depth_data))
+                  
             loss_sum_rgb += loss_aae_rgb_data / steps
             loss_sum_depth += loss_aae_depth_data / steps
 
