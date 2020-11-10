@@ -183,10 +183,12 @@ class aae_trainer(nn.Module):
                 os.makedirs(self.log_dir)
                 copyfile(self.cfg_path, self.log_dir + '/config.yml')
 
+        print('dataset workers %d' % (self.cfg_all.TRAIN.WORKERS))
         train_generator = torch.utils.data.DataLoader(train_set, batch_size=self.batch_size_train,
                                                       shuffle=True, num_workers=self.cfg_all.TRAIN.WORKERS)
 
         if dstr_dataset != None:
+            print('background workers %d' % (self.cfg_all.TRAIN.DISTRACTOR_WORKERS))
             train_dstr_generator = torch.utils.data.DataLoader(dstr_dataset, batch_size=self.batch_size_train,
                                                               shuffle=True, num_workers=self.cfg_all.TRAIN.DISTRACTOR_WORKERS)
         else:
