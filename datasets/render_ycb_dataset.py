@@ -275,21 +275,24 @@ class DistractorDataset(data.Dataset):
 
     def load(self, fn):
 
-        image_dis = Image.open(fn).convert("RGB")
-        image_dis = self.transform(image_dis)
-        distractor = np.array(image_dis)
+        try:
+            image_dis = Image.open(fn).convert("RGB")
+            image_dis = self.transform(image_dis)
+            distractor = np.array(image_dis)
 
-        distractor = cv2.cvtColor(distractor, cv2.COLOR_RGB2BGR)
-        distractor = add_noise(chromatic_transform(distractor,
+            distractor = cv2.cvtColor(distractor, cv2.COLOR_RGB2BGR)
+            distractor = add_noise(chromatic_transform(distractor,
                                                    self.chrom_rand_level[0],
                                                    self.chrom_rand_level[1],
                                                    self.chrom_rand_level[2])
-                               ).astype(np.uint8)
-        distractor = cv2.cvtColor(distractor, cv2.COLOR_BGR2RGB)
+                                   ).astype(np.uint8)
+            distractor = cv2.cvtColor(distractor, cv2.COLOR_BGR2RGB)
 
-        distractor = distractor.transpose(
-            2, 0, 1).astype(
-            np.float32) / 255.0
+            distractor = distractor.transpose(
+                2, 0, 1).astype(
+                np.float32) / 255.0
+        except:
+            distractor = np.zeros((3, 128, 128), dtype=np.float32)
 
         return distractor
 
