@@ -27,7 +27,7 @@ for s in setup:
             f.write('  --cfg_dir ./config/train/YCB/ \\\n')
             f.write('  --obj %s \\\n' %(cls))
             f.write('  --epochs 200 \\\n')
-            f.write('  --save 50 \\\n')
+            f.write('  --save 25 \\\n')
             f.write('  --modality %s \\\n' % (modality))
             f.write('  --dis_dir data/coco/train2014/train2014 \\\n')
             f.write('  --dataset dex_ycb_%s_train \\\n' % (s))
