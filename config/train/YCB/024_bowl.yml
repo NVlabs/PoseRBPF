@@ -1,6 +1,5 @@
 EXP_DIR: ycb_dataset
 CODE_DIM: 128
-GPU_ID: 1
 TRAIN:
   DEPTH_EMBEDDING: True
   OBJECTS: !!python/tuple ['024_bowl']
