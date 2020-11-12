@@ -32,7 +32,7 @@ import gc
 
 class aae_trainer(nn.Module):
     def __init__(self, cfg_path, object_names, modality, config_new=None,
-                 aae_capacity=1, aae_code_dim=128, ckpt_path=None, obj_ctg='ycb'):
+                 aae_capacity=1, aae_code_dim=128, ckpt_path=None, obj_ctg='ycb', lr=0.0002):
         super(aae_trainer, self).__init__()
 
         self.cfg_path = cfg_path
@@ -65,11 +65,11 @@ class aae_trainer(nn.Module):
             self.optimizer = optim.Adam(list(self.AAE.encoder.parameters()) + \
                                         list(self.AAE.decoder.parameters()) + \
                                         list(self.AAE.depth_decoder.parameters()),
-                                        lr=0.0002)
+                                        lr=lr)
         else:
             self.optimizer = optim.Adam(list(self.AAE.encoder.parameters()) + \
                                         list(self.AAE.decoder.parameters()),
-                                        lr=0.0002)
+                                        lr=lr)
 
         self.mseloss = nn.MSELoss()
         self.l1_loss = nn.L1Loss()

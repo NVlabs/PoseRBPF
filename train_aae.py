@@ -36,6 +36,9 @@ def parse_args():
     parser.add_argument('--epochs', dest='epochs',
                         help='number of epochs to train',
                         default=100, type=int)
+    parser.add_argument('--lr', dest='lr',
+                        help='learning rate',
+                        default=0.0002, type=float)
     parser.add_argument('--pretrained', dest='pretrained',
                         help='initialize with pretrained checkpoint',
                         default=None, type=str)
@@ -150,8 +153,8 @@ if __name__ == '__main__':
                           aae_capacity=cfg.CAPACITY,
                           aae_code_dim=cfg.CODE_DIM,
                           ckpt_path=args.pretrained,
-                          obj_ctg=args.obj_ctg)
-
+                          obj_ctg=args.obj_ctg,
+                          lr=args.lr)
 
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")

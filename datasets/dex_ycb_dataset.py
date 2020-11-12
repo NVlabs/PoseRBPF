@@ -278,16 +278,13 @@ class dex_ycb_dataset(data.Dataset):
         s, c, f = self._mapping[idx]
 
         is_testing = f % _BOP_EVAL_SUBSAMPLING_FACTOR == 0
-        if self._split == 'test' and not is_testing:
-            sample = {'is_testing': is_testing}
-            return sample
-
         scene_id, im_id = self.get_bop_id_from_idx(idx)
         video_id = '%04d' % (scene_id)
         image_id = '%06d' % (im_id)
 
         # posecnn result path
-        posecnn_result_path = os.path.join(self._dex_ycb_path, 'results_posecnn', self._name, video_id + '_' + image_id + '.mat')
+        posecnn_result_path = os.path.join(self._dex_ycb_path, 'results_posecnn', self._name, 'vgg16_dex_ycb_epoch_16.checkpoint.pth',
+            video_id + '_' + image_id + '.mat')
 
         d = os.path.join(self._data_dir, self._sequences[s], self._serials[c])
         roidb = {

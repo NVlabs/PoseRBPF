@@ -317,12 +317,13 @@ if __name__ == '__main__':
     # loop the dataset
     visualize = False
     video_id = ''
-    for sample in dataloader:
+    epoch_size = len(dataloader)
+    for k, sample in enumerate(dataloader):
 
         # _vis_minibatch(sample, obj_list, dataset_test._class_colors)
 
-        if 'is_testing' in sample and sample['is_testing'] == 0:
-            continue
+        # if 'is_testing' in sample and sample['is_testing'] == 0:
+        #    continue
 
         # prepare data
         image_input = sample['image_color'][0]
@@ -445,6 +446,8 @@ if __name__ == '__main__':
             if len(index_sdf) > 0:
                 pose_rbpf.pose_refine_multiple(sdf_optimizer, posecnn_classes, index_sdf, im_depth, 
                     im_pcloud, image_label, steps=50)
+
+        print('=========[%d/%d]==========' % (k, epoch_size))
     #'''
 
     filename = os.path.join(output_dir, 'results_poserbpf.mat')
