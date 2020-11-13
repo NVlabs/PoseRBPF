@@ -980,6 +980,8 @@ class PoseRBPF:
         if np.sum(normalizers_cpu) == 0:
             return 0
         self.rbpf.weights = normalizers_cpu / np.sum(normalizers_cpu)
+        self.rbpf.weights = np.nan_to_num(self.rbpf.weights, nan=1e-6, posinf=1.0, neginf=1e-6)
+        self.rbpf.weights /= np.sum(self.rbpf.weights)
 
         rot_dist /= normalizers.unsqueeze(1).repeat(1, self.target_obj_codebook.size(0))
 

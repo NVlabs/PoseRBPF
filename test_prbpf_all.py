@@ -320,6 +320,9 @@ if __name__ == '__main__':
     epoch_size = len(dataloader)
     for k, sample in enumerate(dataloader):
 
+        if 'is_testing' in sample and sample['is_testing'] == 0:
+            continue
+
         # _vis_minibatch(sample, obj_list, dataset_test._class_colors)
 
         # if 'is_testing' in sample and sample['is_testing'] == 0:

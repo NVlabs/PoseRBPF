@@ -278,6 +278,10 @@ class dex_ycb_dataset(data.Dataset):
         s, c, f = self._mapping[idx]
 
         is_testing = f % _BOP_EVAL_SUBSAMPLING_FACTOR == 0
+        if self._split == 'test' and not is_testing:
+            sample = {'is_testing': is_testing}
+            return sample
+
         scene_id, im_id = self.get_bop_id_from_idx(idx)
         video_id = '%04d' % (scene_id)
         image_id = '%06d' % (im_id)
