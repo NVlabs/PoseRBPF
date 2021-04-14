@@ -262,6 +262,34 @@ sh scripts/test_tless_rgbd/val_tless_01_rgbd.sh 0 1
 sh scripts/test_tless_rgb/val_tless_01_rgb.sh 0 1
 ```
 
+## Testing on the DexYCB Dataset
+
+- Download checkpoints from [the google drive folder](https://drive.google.com/drive/folders/1mkW9RSgXHKnYmSJIKEI3pjaNgc_IKpgD?usp=sharing) (```ycb_rgbd_full.tar.gz``` or ```ycb_rgb_full.tar.gz```) and unzip to the checkpoint directory.
+
+- Download the DexYCB dataset from [here](https://dex-ycb.github.io/).
+
+- Download PoseCNN results on the DexYCB dataset from [here](https://drive.google.com/file/d/1RguqnMAekb18d9mIj2ZctDWb7q2xJtbZ/view?usp=sharing).
+
+- Create a symlink for the DexYCB dataset and the PoseCNN results
+    ```Shell
+    cd $ROOT/data/DEX_YCB
+    ln -s $dex_ycb_data data
+    ln -s $results_posecnn_data results_posecnn
+    ```
+
+- Install PyTorch PoseCNN layers according to the instructions [here](https://github.com/NVlabs/PoseCNN-PyTorch).
+
+- Run RGB-D tracking:
+    ```angular2html
+    ./scripts/test_dex_rgbd/dex_ycb_test_rgbd_s0.sh $GPU_ID
+    ```
+
+- Run RGB tracking:
+    ```angular2html
+    ./scripts/test_dex_rgb/dex_ycb_test_rgb_s0.sh $GPU_ID
+    ```
+
+
 ## Training
 - Download microsoft coco dataset 2017 val images from [here](http://images.cocodataset.org/zips/val2017.zip) for data augmentation.
 - Store the folder ```val2017``` in ```../coco/```
